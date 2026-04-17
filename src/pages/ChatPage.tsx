@@ -119,6 +119,7 @@ const ChatPage = () => {
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
             status,
+            reactions: m.reactions || [],
             ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
@@ -169,9 +170,8 @@ const ChatPage = () => {
             senderId: isMyMsg ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-            // Incoming via socket = recipient is online = delivered for sender's perspective
-            // The actual sender's UI update comes via "message delivered" socket event
             status: isMyMsg ? "sent" : undefined,
+            reactions: m.reactions || [],
             ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
@@ -231,10 +231,17 @@ const ChatPage = () => {
       }
     };
 
+    // Real-time reaction updates — broadcast to whole chat room by backend
+    const handleReactionUpdated = ({ messageId, reactions }: { messageId: string; reactions: any[] }) => {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId ? { ...msg, reactions } : msg
+        )
+      );
+    };
+
     const handleUserOnline = (uid: string) => {
-      // Use ref to avoid stale closure when chatUser isn't set yet
       if (uid === chatUserIdRef.current) setChatUserOnline(true);
-      // Also update if chatUser state is already populated
       if (chatUser && uid === chatUser._id) setChatUserOnline(true);
     };
     const handleUserOffline = (uid: string) => {
@@ -246,6 +253,7 @@ const ChatPage = () => {
     socket.on("message delivered", handleMessageDelivered);
     socket.on("messages delivered", handleMessagesDelivered);
     socket.on("messages read", handleMessagesRead);
+    socket.on("reaction updated", handleReactionUpdated);
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
     socket.on("user-online", handleUserOnline);
@@ -256,6 +264,7 @@ const ChatPage = () => {
       socket.off("message delivered", handleMessageDelivered);
       socket.off("messages delivered", handleMessagesDelivered);
       socket.off("messages read", handleMessagesRead);
+      socket.off("reaction updated", handleReactionUpdated);
       socket.off("typing");
       socket.off("stop typing");
       socket.off("user-online", handleUserOnline);
@@ -289,6 +298,16 @@ const ChatPage = () => {
   const addPending = (urls: string[]) => setPendingImages(prev => [...prev, ...urls]);
   const removePending = (i: number) => setPendingImages(prev => prev.filter((_, idx) => idx !== i));
   const openLightbox = (images: string[], index: number) => setLightbox({ images, index });
+
+  /* Toggle emoji reaction — calls API then socket broadcast handled by backend */
+  const handleReact = useCallback(async (msgId: string, emoji: string) => {
+    try {
+      await api.post(`/messages/${msgId}/react`, { emoji });
+      // UI update comes via the "reaction updated" socket event emitted by the server
+    } catch (err) {
+      console.error("Failed to toggle reaction", err);
+    }
+  }, []);
 
   /* ── Typing event with proper debounce (no closure leaking) ── */
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -429,6 +448,8 @@ const ChatPage = () => {
                     onReply={setReplyingTo} chatUser={chatUser}
                     playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                     onImageTap={openLightbox}
+                    onReact={handleReact}
+                    myUserId={user?._id ?? ""}
                   />
                 </div>
               </div>
