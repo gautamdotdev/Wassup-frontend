@@ -7,7 +7,7 @@ interface Props {
   visible: boolean;
   position: "top" | "bottom";
   isMe: boolean;
-  onReact: (emoji: string) => void;
+  onReact?: (emoji: string) => void;  // optional for safety
   onClose: () => void;
 }
 
@@ -56,7 +56,7 @@ export function ReactionBar({ visible, position, isMe, onReact, onClose }: Props
           key={emoji}
           className="text-[26px] leading-none hover:scale-125 active:scale-110
                      transition-transform duration-150 p-0.5"
-          onClick={() => { onReact(emoji); onClose(); }}
+          onClick={() => { if (typeof onReact === "function") onReact(emoji); onClose(); }}
           aria-label={`React with ${emoji}`}
         >
           {emoji}

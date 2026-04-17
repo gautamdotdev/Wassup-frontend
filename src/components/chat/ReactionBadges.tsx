@@ -4,7 +4,7 @@ import { GroupedReaction } from "@/types/chat";
 interface Props {
   reactions: GroupedReaction[];
   isMe: boolean;
-  onReact: (emoji: string) => void;
+  onReact?: (emoji: string) => void;  // optional for safety
 }
 
 /**
@@ -20,7 +20,7 @@ export function ReactionBadges({ reactions, isMe, onReact }: Props) {
       {reactions.map(({ emoji, count, reacted }) => (
         <button
           key={emoji}
-          onClick={() => onReact(emoji)}
+          onClick={() => typeof onReact === "function" && onReact(emoji)}
           className={`
             flex items-center gap-1 px-2.5 py-1
             rounded-full text-sm font-medium

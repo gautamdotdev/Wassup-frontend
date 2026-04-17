@@ -27,14 +27,14 @@ function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string):
 
 export function SwipeRow({
   msg, isMe, isLast, isLastMyMsg, onReply, chatUser,
-  playingVoice, setPlayingVoice, onImageTap, onReact, myUserId,
+  playingVoice, setPlayingVoice, onImageTap, onReact, myUserId = "",
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
   onImageTap: (images: string[], startIndex: number) => void;
-  onReact: (msgId: string, emoji: string) => void;
-  myUserId: string;
+  onReact?: (msgId: string, emoji: string) => void;   // optional — safe if not provided
+  myUserId?: string;
 }) {
   // ── Swipe for reply ──────────────────────────────────────────────────────
   const [offsetX, setOffsetX]       = useState(0);
@@ -98,7 +98,8 @@ export function SwipeRow({
   }, []);
 
   const handleReact = useCallback((emoji: string) => {
-    onReact(msg.id, emoji);
+    // Guard: do nothing if parent didn't wire up onReact yet
+    if (typeof onReact === "function") onReact(msg.id, emoji);
   }, [msg.id, onReact]);
 
   const progress = Math.min(offsetX / SWIPE_THRESHOLD, 1);
