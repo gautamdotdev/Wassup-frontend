@@ -31,6 +31,10 @@ const ChatPage = () => {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Debounce markMessagesRead so rapid incoming messages don't fire N parallel HTTP calls
+  const readDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable ref for chatUser._id — avoids stale closures in socket handlers
+  const chatUserIdRef = useRef<string | null>(null);
 
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -85,6 +89,7 @@ const ChatPage = () => {
         setCurrentChat(chatData);
         const otherUser = chatData.participants.find((p: any) => p._id !== user?._id);
         setChatUser(otherUser);
+        chatUserIdRef.current = otherUser?._id ?? null;  // keep ref in sync
         setChatUserOnline(!!otherUser?.online);
 
         const { data: msgsData } = await api.get(`/messages/${chatData._id}`);
@@ -176,10 +181,14 @@ const ChatPage = () => {
           return [...prev, msg];
         });
 
-        // If it's an incoming message (not from me), mark as read immediately
+        // If it's an incoming message (not from me), mark chat as read — debounced
+        // so that a burst of N messages only triggers ONE HTTP call after 1.5 s.
         if ((m.senderId?._id || m.senderId) !== user?._id) {
-          api.post(`/messages/read/${incomingChatId}`).catch(() => {});
-          queryClient.invalidateQueries({ queryKey: ["chats"] });
+          if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
+          readDebounceRef.current = setTimeout(() => {
+            api.post(`/messages/read/${incomingChatId}`).catch(() => {});
+            queryClient.invalidateQueries({ queryKey: ["chats"] });
+          }, 1500);
         }
       }
     };
@@ -226,9 +235,13 @@ const ChatPage = () => {
     };
 
     const handleUserOnline = (uid: string) => {
+      // Use ref to avoid stale closure when chatUser isn't set yet
+      if (uid === chatUserIdRef.current) setChatUserOnline(true);
+      // Also update if chatUser state is already populated
       if (chatUser && uid === chatUser._id) setChatUserOnline(true);
     };
     const handleUserOffline = (uid: string) => {
+      if (uid === chatUserIdRef.current) setChatUserOnline(false);
       if (chatUser && uid === chatUser._id) setChatUserOnline(false);
     };
 
@@ -296,6 +309,7 @@ const ChatPage = () => {
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (readDebounceRef.current)  clearTimeout(readDebounceRef.current);
     };
   }, []);
 
