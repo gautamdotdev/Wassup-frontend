@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiMoreVertical, FiPlus, FiX } from "react-icons/fi";
-import { BsCheckAll, BsPinFill } from "react-icons/bs";
+import { BsCheck, BsCheckAll } from "react-icons/bs";
 import gsap from "gsap";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
@@ -33,15 +33,28 @@ const MessengersPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-    
-    const handleNewMessage = (m: any) => {
-      // Invalidate chats to update latest message and unread counts
+
+    const handleNewMessage = () => {
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    };
+    const handleMessagesRead = () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
 
     socket.on("message recieved", handleNewMessage);
-    return () => { socket.off("message recieved", handleNewMessage); };
+    socket.on("messages read", handleMessagesRead);
+    return () => {
+      socket.off("message recieved", handleNewMessage);
+      socket.off("messages read", handleMessagesRead);
+    };
   }, [socket, queryClient]);
+
+  // Refresh when returning to this page (e.g. coming back from ChatPage)
+  useEffect(() => {
+    const onFocus = () => queryClient.invalidateQueries({ queryKey: ["chats"] });
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [queryClient]);
 
   useEffect(() => {
     if (isSearching) {
@@ -232,10 +245,19 @@ const MessengersPage = () => {
           if (!otherUser) return null;
 
           const latestMsg = chat.latestMessage;
-          const isUnread = latestMsg && latestMsg.senderId !== user?._id && !latestMsg.readBy?.includes(user?._id);
-          
+          // senderId is now a populated object {_id, name, avatar}
+          const latestSenderId = latestMsg?.senderId?._id || latestMsg?.senderId;
+          const isMine = latestSenderId === user?._id;
+          // Use server-computed unreadCount for reliability
+          const unreadCount: number = chat.unreadCount ?? 0;
+          const isUnread = unreadCount > 0;
+
+          // Tick state for our outgoing latest message
+          const tickSeen = isMine && latestMsg?.readBy?.length > 1;
+          const tickDelivered = isMine && !tickSeen && latestMsg?.readBy?.length >= 1;
+
           let timeLabel = "";
-          if (latestMsg && latestMsg.createdAt) {
+          if (latestMsg?.createdAt) {
             timeLabel = formatDistanceToNow(new Date(latestMsg.createdAt), { addSuffix: true }).replace('about ', '');
           }
 
@@ -251,39 +273,49 @@ const MessengersPage = () => {
                   className="w-[58px] h-[58px] rounded-full object-cover"
                   alt={otherUser.name}
                 />
+                {otherUser.online && (
+                  <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0 text-left self-center mt-1 pb-1">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-[16px] text-foreground leading-tight truncate pr-2">
+                  <p className={`font-semibold text-[16px] leading-tight truncate pr-2 ${
+                    isUnread ? "text-foreground" : "text-foreground"
+                  }`}>
                     {otherUser.name}
                   </p>
-                  <span
-                    className={`text-[12px] shrink-0 ${isUnread ? "text-foreground font-bold" : "text-muted-foreground"}`}
-                  >
+                  <span className={`text-[12px] shrink-0 ${
+                    isUnread ? "text-green-500 font-semibold" : "text-muted-foreground"
+                  }`}>
                     {timeLabel}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 justify-between">
-                  <div className="flex items-center gap-1.5 truncate flex-1">
-                    {latestMsg?.senderId === user?._id && (
-                      <BsCheckAll
-                        size={20}
-                        className={latestMsg.readBy?.length > 1 ? "text-[#4E89F0] shrink-0" : "text-muted-foreground shrink-0"}
-                      />
+                  <div className="flex items-center gap-1 truncate flex-1">
+                    {/* Tick icon — only for our own last message */}
+                    {isMine && (
+                      tickSeen ? (
+                        <BsCheckAll size={18} className="text-[#4E89F0] shrink-0" />
+                      ) : tickDelivered ? (
+                        <BsCheckAll size={18} className="text-muted-foreground shrink-0" />
+                      ) : (
+                        <BsCheck size={18} className="text-muted-foreground shrink-0" />
+                      )
                     )}
-
-                    <p
-                      className={`text-[14px] truncate ${isUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}
-                    >
-                      {latestMsg ? latestMsg.text : "Say hi!"}
+                    <p className={`text-[14px] truncate ${
+                      isUnread ? "text-foreground font-semibold" : "text-muted-foreground"
+                    }`}>
+                      {latestMsg ? (latestMsg.text || "📷 Photo") : "Say hi!"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2.5 shrink-0 pl-2">
                     {isUnread && (
-                      <span className="bg-[#24d366] text-white text-[11px] font-bold min-w-[10px] h-[10px] rounded-full inline-block" />
+                      <span className="bg-green-500 text-white text-[11px] font-bold min-w-[20px] h-[20px] rounded-full inline-flex items-center justify-center px-1">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
                     )}
                   </div>
                 </div>

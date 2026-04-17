@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, User, ArrowLeft, CheckCircle2, Loader2, Lock } from "lucide-react";
+import { Mail, User, ArrowLeft, CheckCircle2, Loader2, Lock, Sparkles } from "lucide-react";
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 
-type Stage = "form" | "otp";
+// Stages:
+//   "email"  — user enters email, clicks "Send OTP"
+//   "setup"  — new user: enter display name (then OTP auto-sent)
+//   "otp"    — enter the 6-digit code
+type Stage = "email" | "setup" | "otp";
 
-/* ── keyframe styles injected once ───────────────────── */
+/* ── keyframe styles ─────────────────────────────────────────────────────── */
 const STYLES = `
   @keyframes lp-fade-up {
     from { opacity: 0; transform: translateY(16px); }
@@ -35,14 +39,18 @@ const STYLES = `
 export default function LoginPage() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const [name, setName] = useState("");
+
+  const [stage, setStage] = useState<Stage>("email");
   const [email, setEmail] = useState("");
-  const [stage, setStage] = useState<Stage>("form");
+  const [name, setName] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!document.getElementById("lp-styles")) {
@@ -53,27 +61,49 @@ export default function LoginPage() {
     }
   }, []);
 
+  /* Focus management per stage */
   useEffect(() => {
-    if (stage === "otp") {
-      setTimeout(() => inputRefs.current[0]?.focus(), 200);
-    }
+    if (stage === "email") setTimeout(() => emailRef.current?.focus(), 100);
+    if (stage === "setup") setTimeout(() => nameRef.current?.focus(), 100);
+    if (stage === "otp") setTimeout(() => inputRefs.current[0]?.focus(), 200);
   }, [stage]);
 
+  /* ── Stage 1: Email → check existence + send OTP ── */
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!email.trim()) return;
     setLoading(true);
     setError("");
     try {
-      await api.post("/auth/request-otp", { name, email });
-      setStage("otp");
+      const res = await api.post("/auth/request-otp", { email });
+      const userExists: boolean = res.data?.userExists ?? res.data?.data?.userExists ?? false;
+
+      if (userExists) {
+        // Existing user — go straight to OTP
+        setStage("otp");
+      } else {
+        // New user — need name first
+        setStage("setup");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to send OTP");
+      setError(err.response?.data?.error || "Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ── Stage 2 (new users): Confirm name, then go to OTP ── */
+  const handleSetupContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length < 2) {
+      setError("Name must be at least 2 characters.");
+      return;
+    }
+    setError("");
+    setStage("otp");
+  };
+
+  /* ── OTP input handlers ── */
   const handleOtpChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
     const next = [...otp];
@@ -102,11 +132,14 @@ export default function LoginPage() {
     else inputRefs.current[pasted.length]?.focus();
   };
 
+  /* ── Stage 3: Verify OTP ── */
   const verifyOtp = async (code: string) => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.post("/auth/verify-otp", { email, otp: code });
+      const payload: Record<string, string> = { email, otp: code };
+      if (name.trim()) payload.name = name.trim(); // pass name for new users
+      const res = await api.post("/auth/verify-otp", payload);
       setSuccess(true);
       setUser(res.data);
       setTimeout(() => navigate("/messengers", { replace: true }), 900);
@@ -119,7 +152,26 @@ export default function LoginPage() {
     }
   };
 
-  const isFormValid = name.trim().length > 1 && /\S+@\S+\.\S+/.test(email);
+  const isEmailValid = /\S+@\S+\.\S+/.test(email);
+
+  /* ── Title + subtitle per stage ── */
+  const titles: Record<Stage, { h: string; sub: string }> = {
+    email: { h: "Get started", sub: "Enter your email to continue." },
+    setup: { h: "Set up profile", sub: "Welcome! Choose a display name to get started." },
+    otp:   { h: "Verify email", sub: "We sent a 6-digit code to your inbox." },
+  };
+
+  const goBack = () => {
+    setError("");
+    setOtp(["", "", "", "", "", ""]);
+    if (stage === "otp") {
+      setStage(name ? "setup" : "email");
+    } else if (stage === "setup") {
+      setStage("email");
+    } else {
+      navigate("/welcome");
+    }
+  };
 
   return (
     <div className="lp-fade-in relative min-h-screen max-w-[430px] mx-auto flex flex-col overflow-hidden bg-background">
@@ -142,65 +194,85 @@ export default function LoginPage() {
       />
 
       {/* Back arrow */}
-      {stage === "form" && (
-        <button
-          onClick={() => navigate("/welcome")}
-          className="lp-fade-in relative z-10 m-5 w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors active:scale-95"
-          style={{ animationDelay: "0.05s" }}
-        >
-          <ArrowLeft size={17} />
-        </button>
-      )}
+      <button
+        onClick={goBack}
+        className="lp-fade-in relative z-10 m-5 w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+        style={{ animationDelay: "0.05s" }}
+      >
+        <ArrowLeft size={17} />
+      </button>
 
       <div className="relative z-10 flex flex-col flex-1 px-6 pt-4 pb-10">
 
         {/* Title block */}
         <div className="lp-fade-up mb-8" style={{ animationDelay: "0.08s" }}>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground leading-tight">
-            {stage === "form" ? "Get started" : "Verify email"}
+            {titles[stage].h}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            {stage === "form"
-              ? "Enter your name & email to continue."
-              : "We sent a 6-digit code to your inbox."}
+            {titles[stage].sub}
           </p>
         </div>
 
-        <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
+        {/* ── STAGE: EMAIL ── */}
+        {stage === "email" && (
+          <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
+            <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.14s" }}>
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Email Address
+              </label>
+              <div
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200"
+                style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))" }}
+              >
+                <Mail size={15} className="text-muted-foreground shrink-0" />
+                <input
+                  ref={emailRef}
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                  placeholder="you@example.com"
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+              </div>
+            </div>
 
-          {/* Name field */}
-          <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.14s" }}>
-            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Full Name
-            </label>
-            <div
-              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200"
+            {error && (
+              <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={!isEmailValid || loading}
+              className="lp-fade-up mt-4 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                background: "hsl(var(--secondary))",
-                borderColor: stage === "otp" ? "transparent" : "hsl(var(--border))",
-                opacity: stage === "otp" ? 0.5 : 1,
+                animationDelay: "0.20s",
+                background: "hsl(var(--foreground))",
+                color: "hsl(var(--background))",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
               }}
             >
-              <User size={15} className="text-muted-foreground shrink-0" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                disabled={stage === "otp"}
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Sending OTP…
+                </>
+              ) : (
+                "Send OTP"
+              )}
+            </button>
+          </form>
+        )}
 
-          {/* Email field — editable on form stage, read-only display on otp stage */}
-          <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.20s" }}>
-            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Email
-            </label>
+        {/* ── STAGE: SETUP (new user — enter name) ── */}
+        {stage === "setup" && (
+          <form onSubmit={handleSetupContinue} className="flex flex-col gap-4">
 
-            {stage === "otp" ? (
-              /* clean read-only row — no input element at all */
+            {/* Locked email display */}
+            <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.10s" }}>
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Email
+              </label>
               <div
                 className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
                 style={{
@@ -221,33 +293,97 @@ export default function LoginPage() {
                   locked
                 </span>
               </div>
-            ) : (
-              /* normal editable input */
+            </div>
+
+            {/* New account hint */}
+            <div
+              className="lp-fade-up flex items-center gap-2.5 px-4 py-3 rounded-2xl"
+              style={{ animationDelay: "0.14s", background: "hsl(142 70% 45% / 0.10)", border: "1px solid hsl(142 70% 45% / 0.25)" }}
+            >
+              <Sparkles size={14} className="text-green-500 shrink-0" />
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                No account found — let's create one for you!
+              </p>
+            </div>
+
+            {/* Name field */}
+            <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.18s" }}>
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Display Name
+              </label>
               <div
                 className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200"
-                style={{
-                  background: "hsl(var(--secondary))",
-                  borderColor: "hsl(var(--border))",
-                }}
+                style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))" }}
               >
-                <Mail size={15} className="text-muted-foreground shrink-0" />
+                <User size={15} className="text-muted-foreground shrink-0" />
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  ref={nameRef}
+                  type="text"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setError(""); }}
+                  placeholder="Your name"
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 />
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* OTP section */}
-          {stage === "otp" && (
-            <div
-              className="lp-fade-up flex flex-col gap-3 mt-2"
-              style={{ animationDelay: "0.05s" }}
+            {error && (
+              <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={name.trim().length < 2 || loading}
+              className="lp-fade-up mt-2 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                animationDelay: "0.22s",
+                background: "hsl(var(--foreground))",
+                color: "hsl(var(--background))",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+              }}
             >
+              Continue
+            </button>
+
+            <p className="text-center text-xs text-muted-foreground mt-1">
+              OTP was already sent to your email
+            </p>
+          </form>
+        )}
+
+        {/* ── STAGE: OTP ── */}
+        {stage === "otp" && (
+          <div className="flex flex-col gap-4">
+
+            {/* Locked email display */}
+            <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.10s" }}>
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Email
+              </label>
+              <div
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
+                style={{
+                  background: "hsl(var(--secondary))",
+                  border: "1.5px dashed hsl(var(--border))",
+                }}
+              >
+                <Mail size={15} className="text-muted-foreground shrink-0" />
+                <span className="flex-1 text-sm text-foreground truncate">{email}</span>
+                <span
+                  className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                  style={{
+                    background: "hsl(var(--border) / 0.3)",
+                    color: "hsl(var(--muted-foreground))",
+                  }}
+                >
+                  <Lock size={9} />
+                  locked
+                </span>
+              </div>
+            </div>
+
+            {/* OTP inputs */}
+            <div className="lp-fade-up flex flex-col gap-3 mt-2" style={{ animationDelay: "0.14s" }}>
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 One-Time Password
               </label>
@@ -296,53 +432,26 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {loading && !success && (
+                <div className="lp-fade-in flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
+                  <Loader2 size={15} className="animate-spin" />
+                  Verifying…
+                </div>
+              )}
+
               {!success && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setStage("form");
-                    setOtp(["", "", "", "", "", ""]);
-                    setError("");
-                  }}
-                  className="text-xs text-muted-foreground underline underline-offset-2 text-center hover:text-foreground transition-colors duration-150"
+                  onClick={goBack}
+                  className="text-xs text-muted-foreground underline underline-offset-2 text-center hover:text-foreground transition-colors duration-150 mt-1"
                 >
                   Wrong email? Go back
                 </button>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Continue button */}
-          {stage === "form" && (
-            <button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className="lp-fade-up mt-4 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{
-                animationDelay: "0.26s",
-                background: "hsl(var(--foreground))",
-                color: "hsl(var(--background))",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Sending OTP…
-                </>
-              ) : (
-                "Continue"
-              )}
-            </button>
-          )}
-
-          {stage === "otp" && loading && !success && (
-            <div className="lp-fade-in flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
-              <Loader2 size={15} className="animate-spin" />
-              Verifying…
-            </div>
-          )}
-        </form>
       </div>
     </div>
   );

@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Phone, Video, MoreVertical, X } from "lucide-react";
 import { FiPlus, FiCamera, FiSend } from "react-icons/fi";
-import { PiSticker } from "react-icons/pi";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useIsDark } from "@/hooks/useIsDark";
 import { Msg } from "@/types/chat";
@@ -30,11 +30,15 @@ const ChatPage = () => {
   const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { user } = useAuth();
   const { socket } = useSocket();
+  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chatUser, setChatUser] = useState<any>(null);
+  const [chatUserOnline, setChatUserOnline] = useState(false);
   const [currentChat, setCurrentChat] = useState<any>(null);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -60,21 +64,18 @@ const ChatPage = () => {
     e.target.value = "";
   };
 
+  /* ── Join socket room when chat loads ── */
   useEffect(() => {
     if (!socket || !currentChat?._id) return;
-
     const joinRoom = () => {
       socket.emit("join chat", currentChat._id);
     };
-
-    joinRoom(); // Initial join
-    socket.on("connect", joinRoom); // Re-join on reconnect
-    
-    return () => {
-      socket.off("connect", joinRoom);
-    };
+    joinRoom();
+    socket.on("connect", joinRoom);
+    return () => { socket.off("connect", joinRoom); };
   }, [socket, currentChat?._id]);
 
+  /* ── Load chat data ── */
   useEffect(() => {
     let active = true;
     const loadChat = async () => {
@@ -84,21 +85,39 @@ const ChatPage = () => {
         setCurrentChat(chatData);
         const otherUser = chatData.participants.find((p: any) => p._id !== user?._id);
         setChatUser(otherUser);
-        
+        setChatUserOnline(!!otherUser?.online);
+
         const { data: msgsData } = await api.get(`/messages/${chatData._id}`);
         if (!active) return;
+
+        const myId = user?._id;
         const mappedMsgs: Msg[] = msgsData.map((m: any) => {
           const sId = m.senderId?._id || m.senderId;
+          const isMe = sId === myId;
+          let status: Msg["status"] = "sent";
+          if (isMe) {
+            // readBy always includes sender so > 1 means the other side read it
+            if (m.readBy && m.readBy.length > 1) {
+              status = "seen";
+            } else if (m.readBy && m.readBy.length >= 1) {
+              status = "delivered";
+            }
+          }
           return {
             id: m._id,
-            senderId: sId === user?._id ? "me" : "other",
+            senderId: isMe ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-            status: m.readBy && m.readBy.length > 1 ? "seen" : "delivered",
-            ...(m.mediaUrl ? { images: [m.mediaUrl] } : {})
+            status,
+            ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
         });
         setMessages(mappedMsgs);
+
+        // Mark all incoming messages as read now that user opened this chat
+        await api.post(`/messages/read/${chatData._id}`).catch(() => {});
+        // Refresh MessengersPage unread badge
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err: any) {
         if (err.response?.status === 403) {
           toast.error("You must connect before chatting");
@@ -112,38 +131,88 @@ const ChatPage = () => {
     return () => { active = false; };
   }, [userId, user]);
 
+  /* ── Socket: messages + typing + online presence + read receipts ── */
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleNewMessage = (m: any) => {
       const incomingChatId = m.chatId?._id || m.chatId;
       if (currentChat && incomingChatId === currentChat._id) {
-        // Prevent duplicate messages if sender also receives the event
         setMessages(prev => {
           if (prev.find(existing => existing.id === m._id)) return prev;
+          const isMyMsg = (m.senderId?._id || m.senderId) === user?._id;
           const msg: Msg = {
             id: m._id,
-            senderId: (m.senderId?._id || m.senderId) === user?._id ? "me" : "other",
+            senderId: isMyMsg ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-            status: "delivered",
-            ...(m.mediaUrl ? { images: [m.mediaUrl] } : {})
+            status: isMyMsg ? "delivered" : "delivered",
+            ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
           return [...prev, msg];
         });
+
+        // If it's an incoming message (not from me), mark as read immediately
+        if ((m.senderId?._id || m.senderId) !== user?._id) {
+          api.post(`/messages/read/${incomingChatId}`).catch(() => {});
+          queryClient.invalidateQueries({ queryKey: ["chats"] });
+        }
       }
     };
 
+    // Other user read our messages → upgrade all our 'delivered' messages to 'seen'
+    const handleMessagesRead = ({ chatId }: { chatId: string }) => {
+      if (currentChat && chatId === currentChat._id) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.senderId === "me" && msg.status !== "seen"
+              ? { ...msg, status: "seen" as Msg["status"] }
+              : msg
+          )
+        );
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+      }
+    };
+
+    const handleUserOnline = (uid: string) => {
+      if (chatUser && uid === chatUser._id) setChatUserOnline(true);
+    };
+    const handleUserOffline = (uid: string) => {
+      if (chatUser && uid === chatUser._id) setChatUserOnline(false);
+    };
+
     socket.on("message recieved", handleNewMessage);
+    socket.on("messages read", handleMessagesRead);
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
+    socket.on("user-online", handleUserOnline);
+    socket.on("user-offline", handleUserOffline);
 
     return () => {
       socket.off("message recieved", handleNewMessage);
+      socket.off("messages read", handleMessagesRead);
       socket.off("typing");
       socket.off("stop typing");
+      socket.off("user-online", handleUserOnline);
+      socket.off("user-offline", handleUserOffline);
     };
-  }, [socket, currentChat, user]);
+  }, [socket, currentChat, user, chatUser, queryClient]);
+
+  /* ── Scroll to bottom on new messages only, not on typing indicator ── */
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    if (isTyping) {
+      // Delay scroll until the maxHeight CSS transition (300ms) finishes expanding,
+      // otherwise the scroll lands before the bubble is fully visible.
+      const t = setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 320);
+      return () => clearTimeout(t);
+    }
+  }, [isTyping]);
 
   /* index of last "seen" outgoing message */
   const lastSeenIdx = (() => {
@@ -152,20 +221,40 @@ const ChatPage = () => {
     return -1;
   })();
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping, pendingImages]);
-
   const addPending = (urls: string[]) => setPendingImages(prev => [...prev, ...urls]);
   const removePending = (i: number) => setPendingImages(prev => prev.filter((_, idx) => idx !== i));
   const openLightbox = (images: string[], index: number) => setLightbox({ images, index });
 
+  /* ── Typing event with proper debounce (no closure leaking) ── */
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    if (!socket || !currentChat) return;
+
+    socket.emit("typing", currentChat._id);
+
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      socket.emit("stop typing", currentChat._id);
+    }, 3000);
+  }, [socket, currentChat]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, []);
+
   const sendMessage = async () => {
     if (!input.trim() && pendingImages.length === 0) return;
     if (!currentChat) return;
+
+    // Stop typing immediately on send
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (socket) socket.emit("stop typing", currentChat._id);
+
     const content = input.trim();
     setInput("");
-    
+
     // Optimistic UI
     const tempId = `m${Date.now()}`;
     const ts = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -189,7 +278,7 @@ const ChatPage = () => {
         socket.emit("new message", res.data);
       }
       setMessages(prev => prev.map(m => m.id === tempId ? {
-        ...m, id: res.data._id, status: "delivered"
+        ...m, id: res.data._id, status: "delivered" as Msg["status"],
       } : m));
     } catch (err) {
       console.error("Failed to send msg", err);
@@ -197,6 +286,12 @@ const ChatPage = () => {
   };
 
   const hasContent = input.trim() || pendingImages.length > 0;
+
+  /* ── Online status helper ── */
+  const isOnline = chatUserOnline;
+  const statusLabel = isTyping ? "typing…" : isOnline ? "Active now" : chatUser?.lastSeen
+    ? `Last seen ${new Date(chatUser.lastSeen).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+    : "Offline";
 
   return (
     <>
@@ -219,11 +314,16 @@ const ChatPage = () => {
           >
             <div className="relative shrink-0">
               <img src={chatUser?.avatar || "https://i.pravatar.cc/150"} className="w-10 h-10 rounded-full object-cover shadow-sm" alt="" />
-              {chatUser?.online && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />}
+              {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />}
             </div>
             <div className="flex flex-col flex-1 overflow-hidden leading-tight justify-center mt-0.5">
               <span className="font-semibold text-foreground text-[15px] truncate">{chatUser?.name || "Loading..."}</span>
-              <span className="text-[11px] text-muted-foreground truncate opacity-80">{chatUser?.online ? "Active now" : "Offline"}</span>
+              <span
+                className="text-[11px] truncate opacity-80 transition-colors duration-300"
+                style={{ color: isTyping ? "hsl(var(--primary))" : isOnline ? "hsl(142 70% 45%)" : "hsl(var(--muted-foreground))" }}
+              >
+                {statusLabel}
+              </span>
             </div>
           </button>
           <div className="flex items-center gap-1 text-muted-foreground">
@@ -262,15 +362,21 @@ const ChatPage = () => {
             );
           })}
 
-          {isTyping && (
-            <div className="flex justify-start mb-4">
+          {/* Typing indicator — fixed height so it doesn't jitter the page */}
+          <div
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{ maxHeight: isTyping ? 56 : 0, opacity: isTyping ? 1 : 0 }}
+          >
+            <div className="flex justify-start mb-4 pt-1">
               <div className="bg-[#f0f0f0] dark:bg-[#2a2a2a] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5">
                 {[0, 180, 360].map(delay => (
                   <div key={delay} className="w-2 h-2 rounded-full bg-muted-foreground animate-typing-bounce" style={{ animationDelay: `${delay}ms` }} />
                 ))}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Scroll anchor */}
           <div ref={bottomRef} />
         </div>
 
@@ -305,7 +411,7 @@ const ChatPage = () => {
             <PendingStrip images={pendingImages} onRemove={removePending} />
           )}
 
-          {/* Attachment panel OR normal input explicitly toggled */}
+          {/* Input row */}
           {showAttachPanel ? (
             <div className="rounded-[32px] pt-5 pb-0" style={{ ...blurStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
               <style>{`@keyframes apSlide { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }`}</style>
@@ -322,25 +428,9 @@ const ChatPage = () => {
                 <FiPlus size={24} />
               </button>
               <div className="flex-1 flex items-center gap-2 rounded-full px-4 py-2.5" style={blurStyle}>
-                {/* <button className="text-muted-foreground hover:text-foreground transition-colors -ml-1">
-                  <PiSticker size={22} />
-                </button> */}
                 <input
                   value={input}
-                  onChange={e => {
-                    setInput(e.target.value);
-                    if (socket && currentChat) {
-                      socket.emit("typing", currentChat._id);
-                      let lastTypingTime = new Date().getTime();
-                      const timerLength = 3000;
-                      setTimeout(() => {
-                        const timeNow = new Date().getTime();
-                        if (timeNow - lastTypingTime >= timerLength) {
-                          socket.emit("stop typing", currentChat._id);
-                        }
-                      }, timerLength);
-                    }
-                  }}
+                  onChange={handleInputChange}
                   onKeyDown={e => e.key === "Enter" && sendMessage()}
                   placeholder="Type here"
                   className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1"
