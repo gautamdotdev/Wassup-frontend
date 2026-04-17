@@ -103,12 +103,25 @@ const ChatPage = () => {
               status = "delivered";
             }
           }
+
+          // Build replyTo from the populated field (object with text + senderId)
+          let replyTo: Msg["replyTo"] | undefined;
+          if (m.replyTo) {
+            const rtSenderId = m.replyTo.senderId?._id || m.replyTo.senderId;
+            replyTo = {
+              id: m.replyTo._id,
+              senderId: rtSenderId === myId ? "me" : "other",
+              text: m.replyTo.text || "Voice message",
+            };
+          }
+
           return {
             id: m._id,
             senderId: isMe ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
             status,
+            ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
         });
@@ -141,12 +154,25 @@ const ChatPage = () => {
         setMessages(prev => {
           if (prev.find(existing => existing.id === m._id)) return prev;
           const isMyMsg = (m.senderId?._id || m.senderId) === user?._id;
+
+          // Map replyTo if present in the socket payload
+          let replyTo: Msg["replyTo"] | undefined;
+          if (m.replyTo) {
+            const rtSenderId = m.replyTo.senderId?._id || m.replyTo.senderId;
+            replyTo = {
+              id: m.replyTo._id || m.replyTo,
+              senderId: rtSenderId === user?._id ? "me" : "other",
+              text: m.replyTo.text || "Voice message",
+            };
+          }
+
           const msg: Msg = {
             id: m._id,
             senderId: isMyMsg ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
             status: isMyMsg ? "delivered" : "delivered",
+            ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
           return [...prev, msg];
@@ -273,7 +299,12 @@ const ChatPage = () => {
 
     // Actual API Call
     try {
-      const res = await api.post("/messages", { chatId: currentChat._id, content });
+      const res = await api.post("/messages", {
+        chatId: currentChat._id,
+        content,
+        // Pass the replied-to message's DB id so the backend can persist it
+        ...(replyingTo ? { replyTo: replyingTo.id } : {}),
+      });
       if (socket) {
         socket.emit("new message", res.data);
       }

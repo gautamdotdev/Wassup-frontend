@@ -4,9 +4,9 @@ import { ImageGrid } from "./ImageGrid";
 import { Msg } from "@/types/chat";
 
 export function BubbleContent({
-  msg, isMe, isLast, playingVoice, setPlayingVoice, onImageTap,
+  msg, isMe, isLast, chatUser, playingVoice, setPlayingVoice, onImageTap,
 }: {
-  msg: Msg; isMe: boolean; isLast: boolean;
+  msg: Msg; isMe: boolean; isLast: boolean; chatUser?: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
   onImageTap: (images: string[], startIndex: number) => void;
 }) {
@@ -14,6 +14,12 @@ export function BubbleContent({
   const radiusClass = isLast
     ? (isMe ? "rounded-[22px] rounded-br-[5px]" : "rounded-[22px] rounded-bl-[5px]")
     : "rounded-[22px]";
+
+  /* ── Reply label helper ── */
+  const replyLabel = (senderId: string) => {
+    if (senderId === "me") return "You";
+    return chatUser?.name?.split(" ")[0] || "Them";
+  };
 
   /* voice */
   if (msg.voiceNote) {
@@ -54,7 +60,7 @@ export function BubbleContent({
     );
   }
 
-  /* text + optional reply + optional legacy single thumb */
+  /* text + optional reply quote */
   return (
     <div className={`${radiusClass} overflow-hidden ${bubbleBg}`} style={{ minWidth: 80 }}>
       {msg.replyTo && (
@@ -65,10 +71,16 @@ export function BubbleContent({
               ?.scrollIntoView({ behavior: "smooth", block: "center" })
           }
         >
-          <p className="text-[12px] font-semibold text-foreground/70 mb-1.5">Replying :</p>
+          {/* "Replying to NAME" header */}
+          <p className="text-[11px] font-semibold mb-1.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Replying to{" "}
+            <span className="text-foreground">{replyLabel(msg.replyTo.senderId)}</span>
+          </p>
           <div className="flex items-stretch gap-2">
-            <div className="w-[3px] bg-foreground rounded-full shrink-0" />
-            <p className="text-[13px] text-foreground/60 leading-snug truncate flex-1">{msg.replyTo.text}</p>
+            <div className="w-[3px] bg-foreground/50 rounded-full shrink-0" />
+            <p className="text-[13px] text-foreground/60 leading-snug line-clamp-2 flex-1">
+              {msg.replyTo.text}
+            </p>
           </div>
           <div className="mt-2 border-t border-black/[0.06] dark:border-white/[0.06]" />
         </button>

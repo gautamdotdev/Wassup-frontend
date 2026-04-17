@@ -51,6 +51,7 @@ export function SwipeRow({
         <div className="max-w-[78%]">
           <BubbleContent
             msg={msg} isMe={isMe} isLast={isLast}
+            chatUser={chatUser}
             playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
             onImageTap={onImageTap}
           />
