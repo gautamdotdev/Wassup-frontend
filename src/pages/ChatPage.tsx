@@ -94,15 +94,11 @@ const ChatPage = () => {
         const mappedMsgs: Msg[] = msgsData.map((m: any) => {
           const sId = m.senderId?._id || m.senderId;
           const isMe = sId === myId;
-          let status: Msg["status"] = "sent";
-          if (isMe) {
-            // readBy always includes sender so > 1 means the other side read it
-            if (m.readBy && m.readBy.length > 1) {
-              status = "seen";
-            } else if (m.readBy && m.readBy.length >= 1) {
-              status = "delivered";
-            }
-          }
+
+          // tickStatus is computed by the backend (sent / delivered / seen)
+          const status: Msg["status"] = isMe
+            ? (m.tickStatus ?? "sent")
+            : undefined;
 
           // Build replyTo from the populated field (object with text + senderId)
           let replyTo: Msg["replyTo"] | undefined;
@@ -171,7 +167,9 @@ const ChatPage = () => {
             senderId: isMyMsg ? "me" : "other",
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-            status: isMyMsg ? "delivered" : "delivered",
+            // Incoming via socket = recipient is online = delivered for sender's perspective
+            // The actual sender's UI update comes via "message delivered" socket event
+            status: isMyMsg ? "sent" : undefined,
             ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
@@ -186,7 +184,34 @@ const ChatPage = () => {
       }
     };
 
-    // Other user read our messages → upgrade all our 'delivered' messages to 'seen'
+    // Sender's message was delivered to recipient (recipient was online at send time)
+    const handleMessageDelivered = ({ messageId, chatId }: { messageId: string; chatId: string }) => {
+      if (currentChat && chatId === currentChat._id) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === messageId && msg.senderId === "me" && msg.status === "sent"
+              ? { ...msg, status: "delivered" as Msg["status"] }
+              : msg
+          )
+        );
+      }
+    };
+
+    // Bulk delivery — recipient just came back online; multiple messages upgrade at once
+    const handleMessagesDelivered = ({ chatId, messageIds }: { chatId: string; messageIds: string[] }) => {
+      if (currentChat && chatId === currentChat._id) {
+        const idSet = new Set(messageIds);
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.senderId === "me" && msg.status === "sent" && idSet.has(msg.id)
+              ? { ...msg, status: "delivered" as Msg["status"] }
+              : msg
+          )
+        );
+      }
+    };
+
+    // Other user read our messages → upgrade all our 'delivered'/'sent' messages to 'seen'
     const handleMessagesRead = ({ chatId }: { chatId: string }) => {
       if (currentChat && chatId === currentChat._id) {
         setMessages(prev =>
@@ -208,6 +233,8 @@ const ChatPage = () => {
     };
 
     socket.on("message recieved", handleNewMessage);
+    socket.on("message delivered", handleMessageDelivered);
+    socket.on("messages delivered", handleMessagesDelivered);
     socket.on("messages read", handleMessagesRead);
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
@@ -216,6 +243,8 @@ const ChatPage = () => {
 
     return () => {
       socket.off("message recieved", handleNewMessage);
+      socket.off("message delivered", handleMessageDelivered);
+      socket.off("messages delivered", handleMessagesDelivered);
       socket.off("messages read", handleMessagesRead);
       socket.off("typing");
       socket.off("stop typing");
@@ -308,8 +337,10 @@ const ChatPage = () => {
       if (socket) {
         socket.emit("new message", res.data);
       }
+      // Replace temp id with real DB id; keep status as 'sent' until we get
+      // a 'message delivered' socket event back from the server.
       setMessages(prev => prev.map(m => m.id === tempId ? {
-        ...m, id: res.data._id, status: "delivered" as Msg["status"],
+        ...m, id: res.data._id, status: "sent" as Msg["status"],
       } : m));
     } catch (err) {
       console.error("Failed to send msg", err);
@@ -320,7 +351,7 @@ const ChatPage = () => {
 
   /* ── Online status helper ── */
   const isOnline = chatUserOnline;
-  const statusLabel = isTyping ? "typing…" : isOnline ? "Active now" : chatUser?.lastSeen
+  const statusLabel = isTyping ? "typing…" : isOnline ? "Online" : chatUser?.lastSeen
     ? `Last seen ${new Date(chatUser.lastSeen).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
     : "Offline";
 

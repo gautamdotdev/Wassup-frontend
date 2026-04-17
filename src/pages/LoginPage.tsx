@@ -5,9 +5,9 @@ import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 // Stages:
-//   "email"  — user enters email, clicks "Send OTP"
-//   "setup"  — new user: enter display name (then OTP auto-sent)
-//   "otp"    — enter the 6-digit code
+//   "email" — user enters email, clicks "Send OTP"
+//   "setup" — new user only: enter display name (OTP already sent)
+//   "otp"   — enter the 6-digit code
 type Stage = "email" | "setup" | "otp";
 
 /* ── keyframe styles ─────────────────────────────────────────────────────── */
@@ -35,6 +35,16 @@ const STYLES = `
   .lp-shake    { animation: lp-shake    0.38s ease;      }
   .lp-pop      { animation: lp-pop      0.32s cubic-bezier(.22,1,.36,1) both; }
 `;
+
+/** Safely extract a string message from an Axios error */
+function getErrorMessage(err: any, fallback: string): string {
+  const data = err?.response?.data;
+  if (!data) return fallback;
+  // dev mode: data.error is the full AppError object — use data.message instead
+  if (data.message && typeof data.message === "string") return data.message;
+  if (data.error && typeof data.error === "string") return data.error;
+  return fallback;
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -65,34 +75,50 @@ export default function LoginPage() {
   useEffect(() => {
     if (stage === "email") setTimeout(() => emailRef.current?.focus(), 100);
     if (stage === "setup") setTimeout(() => nameRef.current?.focus(), 100);
-    if (stage === "otp") setTimeout(() => inputRefs.current[0]?.focus(), 200);
+    if (stage === "otp")   setTimeout(() => inputRefs.current[0]?.focus(), 200);
   }, [stage]);
 
-  /* ── Stage 1: Email → check existence + send OTP ── */
+  /* ─────────────────────────────────────────────────────────────────────────
+   * Stage 1: User enters email → single API call
+   *   Backend: checks if user exists, always sends OTP, returns { userExists }
+   *   • userExists = true  → jump straight to OTP stage
+   *   • userExists = false → show name field first (setup stage)
+   * ───────────────────────────────────────────────────────────────────────── */
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
     setError("");
     try {
-      const res = await api.post("/auth/request-otp", { email });
-      const userExists: boolean = res.data?.userExists ?? res.data?.data?.userExists ?? false;
+      const res = await api.post("/auth/request-otp", { email: email.trim() });
+
+      // The API interceptor unwraps { status, data, message } envelopes.
+      // requestOtp does NOT use the envelope → res.data is the raw response object:
+      // { status: 'success', message: '...', userExists: true/false }
+      const raw = res.data;
+      const userExists: boolean =
+        raw?.userExists ??         // direct field
+        raw?.data?.userExists ??   // nested (just in case)
+        false;
 
       if (userExists) {
-        // Existing user — go straight to OTP
+        // Existing user — OTP sent, go directly to OTP entry
         setStage("otp");
       } else {
-        // New user — need name first
+        // New user — OTP sent, but we still need their name
         setStage("setup");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to send OTP. Please try again.");
+      setError(getErrorMessage(err, "Failed to send OTP. Please try again."));
     } finally {
       setLoading(false);
     }
   };
 
-  /* ── Stage 2 (new users): Confirm name, then go to OTP ── */
+  /* ─────────────────────────────────────────────────────────────────────────
+   * Stage 2 (new users only): Enter name → go to OTP
+   *   No additional API call needed — OTP was already sent in stage 1.
+   * ───────────────────────────────────────────────────────────────────────── */
   const handleSetupContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) {
@@ -103,7 +129,7 @@ export default function LoginPage() {
     setStage("otp");
   };
 
-  /* ── OTP input handlers ── */
+  /* ── OTP input handlers ───────────────────────────────────────────────── */
   const handleOtpChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, "").slice(-1);
     const next = [...otp];
@@ -111,14 +137,13 @@ export default function LoginPage() {
     setOtp(next);
     setError("");
     if (digit && index < 5) inputRefs.current[index + 1]?.focus();
-    const full = next.join("");
-    if (full.length === 6) verifyOtp(full);
+    if (next.join("").length === 6) verifyOtp(next.join(""));
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !otp[index] && index > 0)
       inputRefs.current[index - 1]?.focus();
-    if (e.key === "ArrowLeft" && index > 0) inputRefs.current[index - 1]?.focus();
+    if (e.key === "ArrowLeft"  && index > 0) inputRefs.current[index - 1]?.focus();
     if (e.key === "ArrowRight" && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
@@ -132,19 +157,22 @@ export default function LoginPage() {
     else inputRefs.current[pasted.length]?.focus();
   };
 
-  /* ── Stage 3: Verify OTP ── */
+  /* ─────────────────────────────────────────────────────────────────────────
+   * Stage 3: Verify OTP
+   *   For new users, also sends the name so the backend can save it.
+   * ───────────────────────────────────────────────────────────────────────── */
   const verifyOtp = async (code: string) => {
     setLoading(true);
     setError("");
     try {
-      const payload: Record<string, string> = { email, otp: code };
-      if (name.trim()) payload.name = name.trim(); // pass name for new users
+      const payload: Record<string, string> = { email: email.trim(), otp: code };
+      if (name.trim()) payload.name = name.trim(); // only for new users
       const res = await api.post("/auth/verify-otp", payload);
       setSuccess(true);
       setUser(res.data);
       setTimeout(() => navigate("/messengers", { replace: true }), 900);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Incorrect OTP. Please try again.");
+      setError(getErrorMessage(err, "Incorrect OTP. Please try again."));
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } finally {
@@ -154,44 +182,44 @@ export default function LoginPage() {
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
 
-  /* ── Title + subtitle per stage ── */
+  /* ── Titles per stage ─────────────────────────────────────────────────── */
   const titles: Record<Stage, { h: string; sub: string }> = {
-    email: { h: "Get started", sub: "Enter your email to continue." },
-    setup: { h: "Set up profile", sub: "Welcome! Choose a display name to get started." },
-    otp:   { h: "Verify email", sub: "We sent a 6-digit code to your inbox." },
+    email: { h: "Get started",    sub: "Enter your email to continue."              },
+    setup: { h: "Set up profile", sub: "Choose a display name to complete sign-up." },
+    otp:   { h: "Verify email",   sub: "Enter the 6-digit code sent to your inbox." },
   };
 
   const goBack = () => {
     setError("");
     setOtp(["", "", "", "", "", ""]);
-    if (stage === "otp") {
-      setStage(name ? "setup" : "email");
-    } else if (stage === "setup") {
-      setStage("email");
-    } else {
-      navigate("/welcome");
-    }
+    if      (stage === "otp")   setStage(name ? "setup" : "email");
+    else if (stage === "setup") setStage("email");
+    else                        navigate("/welcome");
   };
+
+  /* ── Shared inline styles ─────────────────────────────────────────────── */
+  const inputBox = {
+    background: "hsl(var(--secondary))",
+    borderColor: "hsl(var(--border))",
+  } as const;
+
+  const lockedBox = {
+    background: "hsl(var(--secondary))",
+    border: "1.5px dashed hsl(var(--border))",
+  } as const;
+
+  const primaryBtn = {
+    background: "hsl(var(--foreground))",
+    color: "hsl(var(--background))",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+  } as const;
 
   return (
     <div className="lp-fade-in relative min-h-screen max-w-[430px] mx-auto flex flex-col overflow-hidden bg-background">
+
       {/* Ambient blobs */}
-      <div
-        className="pointer-events-none absolute"
-        style={{
-          top: "-10%", right: "-15%", width: 260, height: 260, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(234,179,8,0.18) 0%, transparent 70%)",
-          filter: "blur(40px)",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute"
-        style={{
-          bottom: 0, left: "-10%", width: 220, height: 220, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(20,184,166,0.15) 0%, transparent 70%)",
-          filter: "blur(35px)",
-        }}
-      />
+      <div className="pointer-events-none absolute" style={{ top: "-10%", right: "-15%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(234,179,8,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div className="pointer-events-none absolute" style={{ bottom: 0, left: "-10%", width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(20,184,166,0.15) 0%, transparent 70%)", filter: "blur(35px)" }} />
 
       {/* Back arrow */}
       <button
@@ -214,17 +242,15 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* ── STAGE: EMAIL ── */}
+        {/* ── STAGE: EMAIL ───────────────────────────────────────────────── */}
         {stage === "email" && (
           <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
+
             <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.14s" }}>
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Email Address
               </label>
-              <div
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200"
-                style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))" }}
-              >
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200" style={inputBox}>
                 <Mail size={15} className="text-muted-foreground shrink-0" />
                 <input
                   ref={emailRef}
@@ -237,84 +263,47 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {error && (
-              <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>
-            )}
+            {error && <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>}
 
             <button
               type="submit"
               disabled={!isEmailValid || loading}
               className="lp-fade-up mt-4 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{
-                animationDelay: "0.20s",
-                background: "hsl(var(--foreground))",
-                color: "hsl(var(--background))",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-              }}
+              style={{ animationDelay: "0.20s", ...primaryBtn }}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Sending OTP…
-                </>
-              ) : (
-                "Send OTP"
-              )}
+              {loading ? <><Loader2 size={16} className="animate-spin" /> Sending OTP…</> : "Send OTP"}
             </button>
           </form>
         )}
 
-        {/* ── STAGE: SETUP (new user — enter name) ── */}
+        {/* ── STAGE: SETUP (new user — enter name) ───────────────────────── */}
         {stage === "setup" && (
           <form onSubmit={handleSetupContinue} className="flex flex-col gap-4">
 
-            {/* Locked email display */}
+            {/* Locked email */}
             <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.10s" }}>
-              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Email
-              </label>
-              <div
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-                style={{
-                  background: "hsl(var(--secondary))",
-                  border: "1.5px dashed hsl(var(--border))",
-                }}
-              >
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Email</label>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={lockedBox}>
                 <Mail size={15} className="text-muted-foreground shrink-0" />
                 <span className="flex-1 text-sm text-foreground truncate">{email}</span>
-                <span
-                  className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                  style={{
-                    background: "hsl(var(--border) / 0.3)",
-                    color: "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  <Lock size={9} />
-                  locked
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: "hsl(var(--border) / 0.3)", color: "hsl(var(--muted-foreground))" }}>
+                  <Lock size={9} /> locked
                 </span>
               </div>
             </div>
 
             {/* New account hint */}
-            <div
-              className="lp-fade-up flex items-center gap-2.5 px-4 py-3 rounded-2xl"
-              style={{ animationDelay: "0.14s", background: "hsl(142 70% 45% / 0.10)", border: "1px solid hsl(142 70% 45% / 0.25)" }}
-            >
+            <div className="lp-fade-up flex items-center gap-2.5 px-4 py-3 rounded-2xl" style={{ animationDelay: "0.14s", background: "hsl(142 70% 45% / 0.10)", border: "1px solid hsl(142 70% 45% / 0.25)" }}>
               <Sparkles size={14} className="text-green-500 shrink-0" />
               <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                No account found — let's create one for you!
+                New account — OTP sent! Just enter your name to continue.
               </p>
             </div>
 
             {/* Name field */}
             <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.18s" }}>
-              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Display Name
-              </label>
-              <div
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200"
-                style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))" }}
-              >
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Display Name</label>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-200" style={inputBox}>
                 <User size={15} className="text-muted-foreground shrink-0" />
                 <input
                   ref={nameRef}
@@ -327,57 +316,35 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {error && (
-              <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>
-            )}
+            {error && <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>}
 
             <button
               type="submit"
-              disabled={name.trim().length < 2 || loading}
+              disabled={name.trim().length < 2}
               className="lp-fade-up mt-2 w-full py-4 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{
-                animationDelay: "0.22s",
-                background: "hsl(var(--foreground))",
-                color: "hsl(var(--background))",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-              }}
+              style={{ animationDelay: "0.22s", ...primaryBtn }}
             >
-              Continue
+              Continue →
             </button>
 
             <p className="text-center text-xs text-muted-foreground mt-1">
-              OTP was already sent to your email
+              Check your inbox for the OTP code
             </p>
           </form>
         )}
 
-        {/* ── STAGE: OTP ── */}
+        {/* ── STAGE: OTP ─────────────────────────────────────────────────── */}
         {stage === "otp" && (
           <div className="flex flex-col gap-4">
 
-            {/* Locked email display */}
+            {/* Locked email */}
             <div className="lp-fade-up flex flex-col gap-1.5" style={{ animationDelay: "0.10s" }}>
-              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Email
-              </label>
-              <div
-                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-                style={{
-                  background: "hsl(var(--secondary))",
-                  border: "1.5px dashed hsl(var(--border))",
-                }}
-              >
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Email</label>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={lockedBox}>
                 <Mail size={15} className="text-muted-foreground shrink-0" />
                 <span className="flex-1 text-sm text-foreground truncate">{email}</span>
-                <span
-                  className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                  style={{
-                    background: "hsl(var(--border) / 0.3)",
-                    color: "hsl(var(--muted-foreground))",
-                  }}
-                >
-                  <Lock size={9} />
-                  locked
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: "hsl(var(--border) / 0.3)", color: "hsl(var(--muted-foreground))" }}>
+                  <Lock size={9} /> locked
                 </span>
               </div>
             </div>
@@ -411,9 +378,7 @@ export default function LoginPage() {
                       background: "hsl(var(--secondary))",
                       borderColor: error
                         ? "hsl(var(--destructive))"
-                        : digit
-                          ? "hsl(var(--foreground))"
-                          : "hsl(var(--border))",
+                        : digit ? "hsl(var(--foreground))" : "hsl(var(--border))",
                       color: "hsl(var(--foreground))",
                       caretColor: "hsl(var(--foreground))",
                     }}
@@ -421,9 +386,7 @@ export default function LoginPage() {
                 ))}
               </div>
 
-              {error && (
-                <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>
-              )}
+              {error && <p className="lp-fade-in text-xs text-center text-destructive">{error}</p>}
 
               {success && (
                 <div className="lp-pop flex items-center justify-center gap-2 text-green-500">
@@ -434,8 +397,7 @@ export default function LoginPage() {
 
               {loading && !success && (
                 <div className="lp-fade-in flex items-center justify-center gap-2 py-2 text-muted-foreground text-sm">
-                  <Loader2 size={15} className="animate-spin" />
-                  Verifying…
+                  <Loader2 size={15} className="animate-spin" /> Verifying…
                 </div>
               )}
 
