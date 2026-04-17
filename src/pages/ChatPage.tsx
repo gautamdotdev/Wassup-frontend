@@ -16,9 +16,6 @@ import { SwipeRow } from "@/components/chat/SwipeRow";
 import { PendingStrip } from "@/components/chat/PendingStrip";
 import { AttachmentPanel } from "@/components/chat/AttachmentPanel";
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  ChatPage                                                                  */
-/* ────────────────────────────────────────────────────────────────────────── */
 const ChatPage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();

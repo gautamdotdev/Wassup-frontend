@@ -15,6 +15,7 @@ import BottomNav from "./components/BottomNav";
 import NotFound from "./pages/NotFound";
 import WelcomePage from "./pages/WelcomePage";
 import LoginPage from "./pages/LoginPage";
+import { ChatNotificationBanner } from "./components/ChatNotificationBanner";
 import { Loader2 } from "lucide-react";
 
 function RootRedirect() {
@@ -35,23 +36,25 @@ const App = () => (
       <AuthProvider>
         <SocketProvider>
           <HashRouter>
+            {/* Global in-app notification banner — outside <Routes> so it persists on all pages */}
+            <ChatNotificationBanner />
+
             <Routes>
-            
               {/* Guest-only */}
               <Route path="/welcome" element={<GuestOnly><WelcomePage /></GuestOnly>} />
-              <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+              <Route path="/login"   element={<GuestOnly><LoginPage /></GuestOnly>} />
 
               {/* Root redirect */}
               <Route path="/" element={<RootRedirect />} />
 
               {/* Protected routes */}
-              <Route path="/messengers" element={<RequireAuth><MessengersPage /></RequireAuth>} />
-              <Route path="/chat/:userId" element={<RequireAuth><ChatPage /></RequireAuth>} />
-              <Route path="/chat/:userId/profile" element={<RequireAuth><ChatUserProfile /></RequireAuth>} />
-              <Route path="/search" element={<RequireAuth><SearchPage /></RequireAuth>} />
-              <Route path="/activity" element={<RequireAuth><ActivityPage /></RequireAuth>} />
-              <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/messengers"              element={<RequireAuth><MessengersPage /></RequireAuth>} />
+              <Route path="/chat/:userId"             element={<RequireAuth><ChatPage /></RequireAuth>} />
+              <Route path="/chat/:userId/profile"     element={<RequireAuth><ChatUserProfile /></RequireAuth>} />
+              <Route path="/search"                  element={<RequireAuth><SearchPage /></RequireAuth>} />
+              <Route path="/activity"                element={<RequireAuth><ActivityPage /></RequireAuth>} />
+              <Route path="/profile"                 element={<RequireAuth><ProfilePage /></RequireAuth>} />
+              <Route path="*"                        element={<NotFound />} />
             </Routes>
             <BottomNav />
           </HashRouter>
