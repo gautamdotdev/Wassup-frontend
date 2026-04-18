@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { ArrowLeft, Copy, MoreVertical } from "lucide-react";
 import { BubbleContent } from "./BubbleContent";
 import { StatusIcon } from "./StatusIcon";
-import { ReactionBar } from "./ReactionBar";
+
 import { ReactionBadges } from "./ReactionBadges";
 import { Msg, GroupedReaction, MsgReaction } from "@/types/chat";
 
@@ -43,15 +43,8 @@ export function SwipeRow({
   const fired                        = useRef(false);
   const swipeActive                  = useRef(false);
 
-  // ── Reaction bar ─────────────────────────────────────────────────────────
-  const [showBar, setShowBar]        = useState(false);
-  const longPressTimer               = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef                 = useRef<HTMLDivElement>(null);
-
   const grouped = groupReactions(msg.reactions, myUserId);
 
-  // Determine if bar should open above or below (simple heuristic)
-  const barPosition: "top" | "bottom" = "top";
 
   // ── Long-press (mobile) ──────────────────────────────────────────────────
   const onTouchStart = (e: React.TouchEvent) => {
@@ -59,10 +52,6 @@ export function SwipeRow({
     setDragging(true);
     fired.current     = false;
     swipeActive.current = false;
-
-    longPressTimer.current = setTimeout(() => {
-      setShowBar(true);
-    }, LONG_PRESS_MS);
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
@@ -70,8 +59,6 @@ export function SwipeRow({
     const raw = isMe ? -dx : dx;
 
     if (Math.abs(dx) > 8) {
-      // User is swiping, cancel long-press
-      if (longPressTimer.current) clearTimeout(longPressTimer.current);
       swipeActive.current = true;
     }
 
@@ -86,16 +73,11 @@ export function SwipeRow({
   };
 
   const onTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
     setDragging(false);
     setOffsetX(0);
   };
 
-  // ── Right-click / long-hover (desktop) ───────────────────────────────────
-  const onContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setShowBar(true);
-  }, []);
+
 
   const handleReact = useCallback((emoji: string) => {
     // Guard: do nothing if parent didn't wire up onReact yet
@@ -106,12 +88,10 @@ export function SwipeRow({
 
   return (
     <div
-      ref={containerRef}
       className="relative"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      onContextMenu={onContextMenu}
     >
       {/* Swipe-to-reply arrow indicator */}
       <div
@@ -132,22 +112,12 @@ export function SwipeRow({
         }}
       >
         <div className="max-w-[78%]">
-          {/* Floating reaction bar */}
-          <div className="relative">
-            <BubbleContent
-              msg={msg} isMe={isMe} isLast={isLast}
-              chatUser={chatUser}
-              playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
-              onImageTap={onImageTap}
-            />
-            <ReactionBar
-              visible={showBar}
-              position={barPosition}
-              isMe={isMe}
-              onReact={handleReact}
-              onClose={() => setShowBar(false)}
-            />
-          </div>
+          <BubbleContent
+            msg={msg} isMe={isMe} isLast={isLast}
+            chatUser={chatUser}
+            playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
+            onImageTap={onImageTap}
+          />
 
           {/* Reaction badges */}
           <ReactionBadges
