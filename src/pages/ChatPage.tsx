@@ -44,6 +44,11 @@ const ChatPage = () => {
   const msgMenuRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* FIX 3 & 4: Use a ref for isAtBottom so scroll effects always read current value (no stale closure) */
+  const isAtBottomRef = useRef(true);
+  /* FIX 4: Track message count to distinguish new-message adds from reaction/status updates */
+  const prevMsgCountRef = useRef(0);
+
   /* core state */
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -81,21 +86,24 @@ const ChatPage = () => {
     return () => document.removeEventListener("contextmenu", block);
   }, []);
 
-  /* ─── scroll tracking ─── */
+  /* ─── FIX 3: scroll tracking — keep ref in sync with state ─── */
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    isAtBottomRef.current = atBottom;
     setIsAtBottom(atBottom);
     if (atBottom) setUnreadWhileAway(0);
   }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
+    isAtBottomRef.current = true;
+    setIsAtBottom(true);
     setUnreadWhileAway(0);
   }, []);
 
-  /* ─── close menus on outside click ─── */
+  /* ─── FIX 6: close menus on outside click ─── */
   useEffect(() => {
     const fn = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -112,12 +120,10 @@ const ChatPage = () => {
 
   /* ─── long press handlers ─── */
   const startLongPress = useCallback((msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
-    // get position from touch or mouse
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
     longPressTimer.current = setTimeout(() => {
-      // vibrate on mobile
       if (navigator.vibrate) navigator.vibrate(30);
       setMsgMenu({ msgId: msg.id, x: clientX, y: clientY, msg });
     }, 500);
@@ -251,6 +257,7 @@ const ChatPage = () => {
             ...(m.mediaUrl ? { images: [m.mediaUrl] } : {}),
           };
         });
+        prevMsgCountRef.current = mapped.length;
         setMessages(mapped);
         await api.post(`/messages/read/${chatData._id}`).catch(() => { });
         queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -287,7 +294,10 @@ const ChatPage = () => {
         return [...prev, msg];
       });
       if ((m.senderId?._id || m.senderId) !== user?._id) {
-        setIsAtBottom(cur => { if (!cur) setUnreadWhileAway(c => c + 1); return cur; });
+        /* FIX 5: Only mark unread counter if NOT at bottom — don't auto-scroll for incoming messages when user scrolled up */
+        if (!isAtBottomRef.current) {
+          setUnreadWhileAway(c => c + 1);
+        }
         if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
         readDebounceRef.current = setTimeout(() => {
           api.post(`/messages/read/${cid}`).catch(() => { });
@@ -336,9 +346,16 @@ const ChatPage = () => {
     };
   }, [socket, currentChat, user, queryClient]);
 
-  /* ─── auto-scroll: only when already at bottom ─── */
+  /* ─── FIX 3 & 4: auto-scroll ONLY when a genuine new message is added AND user is at bottom ─── */
   useEffect(() => {
-    if (isAtBottom) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isNewMessage = messages.length > prevMsgCountRef.current;
+    prevMsgCountRef.current = messages.length;
+
+    // Only scroll for actual new messages (not reaction/status updates)
+    // and only if user is already at the bottom
+    if (isNewMessage && isAtBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   /* ─── initial scroll on chat open ─── */
@@ -363,6 +380,7 @@ const ChatPage = () => {
   const removePending = (i: number) => setPendingImages(p => p.filter((_, idx) => idx !== i));
   const openLightbox = (images: string[], index: number) => setLightbox({ images, index });
 
+  /* FIX 3: React does NOT trigger scroll since it's not a new message (count doesn't change) */
   const handleReact = useCallback(async (msgId: string, emoji: string) => {
     try { await api.post(`/messages/${msgId}/react`, { emoji }); }
     catch (err) { console.error("React failed", err); }
@@ -393,6 +411,7 @@ const ChatPage = () => {
     };
     setMessages(p => [...p, newMsg]);
     setPendingImages([]); setReplyingTo(null);
+    // Always scroll to bottom when I send a message
     setTimeout(() => scrollToBottom("smooth"), 50);
 
     try {
@@ -440,16 +459,16 @@ const ChatPage = () => {
       <input ref={quickCameraRef} type="file" multiple accept="image/*,video/*" capture="environment" className="hidden" onChange={handleQuickCameraPick} />
       {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />}
 
-      {/* ── Message context menu overlay ── */}
+      {/* ── FIX 1: Message context menu — single unified panel: emoji row + actions (Image 1 style) ── */}
       {msgMenu && (
         <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}>
           <div
             ref={msgMenuRef}
-            className="fixed w-[200px] rounded-2xl overflow-hidden"
-            style={{ ...blurStyle, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both" }}
+            className="fixed w-[200px] rounded-2xl"
+            style={{ ...blurStyle, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", overflow: "hidden" }}
           >
             <style>{`@keyframes msgMenuIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}`}</style>
-            {/* Quick emoji row */}
+            {/* Quick emoji row — top of the menu, same panel as actions */}
             <div className="flex items-center justify-around px-3 py-2.5 border-b border-border/30">
               {["❤️", "👍", "😂", "😮", "😢", "🔥"].map(e => (
                 <button key={e} onClick={() => { handleReact(msgMenu.msgId, e); setMsgMenu(null); }}
@@ -458,6 +477,7 @@ const ChatPage = () => {
                 </button>
               ))}
             </div>
+            {/* Action items */}
             {msgMenuActions.map((a, i) => (
               <button key={i} onClick={a.fn}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
@@ -501,7 +521,7 @@ const ChatPage = () => {
             <button className="hover:text-foreground transition-colors p-1.5"><Video size={22} strokeWidth={1.5} /></button>
             <button className="hover:text-foreground transition-colors p-1.5"><Phone size={20} strokeWidth={1.5} /></button>
 
-            {/* 3-dot menu */}
+            {/* FIX 6: 3-dot menu — removed overflow-hidden from dropdown container so "More" submenu renders outside bounds */}
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => { setShowMenu(p => !p); setShowMoreMenu(false); }}
@@ -511,58 +531,65 @@ const ChatPage = () => {
               </button>
 
               {showMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden z-50"
+                /* FIX 6: No overflow-hidden here — the submenu extends to the left and was being clipped */
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50"
                   style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
                   <style>{`@keyframes menuIn{from{opacity:0;transform:scale(0.88) translateY(-6px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
 
-                  {/* Main items */}
-                  {[
-                    { icon: isMuted ? <Bell size={16} strokeWidth={1.5} /> : <BellOff size={16} strokeWidth={1.5} />, label: isMuted ? "Unmute notifications" : "Mute notifications", fn: handleMuteToggle },
-                    { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: handleSearchInChat },
-                    { icon: <Pin size={16} strokeWidth={1.5} />, label: "Remove pin", fn: handleUnpinMessage },
-                    { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
-                    { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
-                  ].map((item, i, arr) => (
-                    <button key={i} onClick={item.fn}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left
-                        ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
-                    >
-                      <span className="text-muted-foreground">{item.icon}</span>
-                      {item.label}
-                    </button>
-                  ))}
+                  {/* Clip only the rounded corners visually using a wrapper per item */}
+                  <div className="rounded-2xl overflow-hidden">
+                    {[
+                      { icon: isMuted ? <Bell size={16} strokeWidth={1.5} /> : <BellOff size={16} strokeWidth={1.5} />, label: isMuted ? "Unmute notifications" : "Mute notifications", fn: handleMuteToggle },
+                      { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: handleSearchInChat },
+                      { icon: <Pin size={16} strokeWidth={1.5} />, label: "Remove pin", fn: handleUnpinMessage },
+                      { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
+                      { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
+                    ].map((item, i, arr) => (
+                      <button key={i} onClick={item.fn}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left
+                          ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
+                      >
+                        <span className="text-muted-foreground">{item.icon}</span>
+                        {item.label}
+                      </button>
+                    ))}
 
-                  {/* More sub-menu trigger */}
-                  <div className="relative border-t border-border/40">
-                    <button
-                      onClick={() => setShowMoreMenu(p => !p)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left"
-                    >
-                      <span className="text-muted-foreground"><MoreVertical size={16} strokeWidth={1.5} /></span>
-                      More
-                      <ChevronRight size={14} className={`ml-auto text-muted-foreground transition-transform ${showMoreMenu ? "rotate-90" : ""}`} />
-                    </button>
+                    {/* FIX 6: More sub-menu — stopPropagation prevents outer mousedown handler firing */}
+                    <div className="relative border-t border-border/40">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMoreMenu(p => !p); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left"
+                      >
+                        <span className="text-muted-foreground"><MoreVertical size={16} strokeWidth={1.5} /></span>
+                        More
+                        <ChevronRight size={14} className={`ml-auto text-muted-foreground transition-transform duration-200 ${showMoreMenu ? "rotate-90" : ""}`} />
+                      </button>
 
-                    {showMoreMenu && (
-                      <div className="absolute right-full top-0 mr-2 w-52 rounded-2xl overflow-hidden z-50"
-                        style={{ ...blurStyle, animation: "menuIn 0.15s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
-                        {[
-                          { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true },
-                          { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
-                          { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
-                          { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
-                        ].map((item, i, arr) => (
-                          <button key={i} onClick={item.fn}
-                            className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
-                              ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
-                              ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
-                          >
-                            <span className={item.danger ? "text-red-500" : "text-muted-foreground"}>{item.icon}</span>
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                      {showMoreMenu && (
+                        /* FIX 6: Render to LEFT of the main menu; positioned relative to the More row */
+                        <div
+                          className="absolute right-full top-0 mr-2 w-52 rounded-2xl overflow-hidden z-50"
+                          style={{ ...blurStyle, animation: "menuIn 0.15s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}
+                          onMouseDown={e => e.stopPropagation()} // prevent closing when clicking inside sub-menu
+                        >
+                          {[
+                            { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true },
+                            { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
+                            { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
+                            { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
+                          ].map((item, i, arr) => (
+                            <button key={i} onClick={item.fn}
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
+                                ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
+                                ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
+                            >
+                              <span className={item.danger ? "text-red-500" : "text-muted-foreground"}>{item.icon}</span>
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -607,7 +634,7 @@ const ChatPage = () => {
             );
           })}
 
-          {/* Typing indicator — no scroll trigger */}
+          {/* Typing indicator */}
           <div className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{ maxHeight: isTyping ? 56 : 0, opacity: isTyping ? 1 : 0 }}>
             <div className="flex justify-start mb-4 pt-1">
@@ -621,21 +648,21 @@ const ChatPage = () => {
           <div ref={bottomRef} />
         </div>
 
-        {/* ── Scroll-to-bottom FAB — fixed inside the max-width column ── */}
+        {/* ── FIX 2: Scroll-to-bottom FAB — fixed positioning so it always renders above the bottom bar ── */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-[88px] flex justify-end pr-4"
-          style={{ zIndex: 30 }}
+          className="pointer-events-none fixed bottom-[100px] right-0 flex justify-end pr-5"
+          style={{ zIndex: 40, maxWidth: 430, width: "100%" }}
         >
           <div
-            className={`pointer-events-auto transition-all duration-200 ${isAtBottom ? "opacity-0 scale-75 translate-y-2" : "opacity-100 scale-100 translate-y-0"}`}
+            className={`pointer-events-auto transition-all duration-200 ${isAtBottom ? "opacity-0 scale-75 translate-y-2 pointer-events-none" : "opacity-100 scale-100 translate-y-0"}`}
           >
             <button
               onClick={() => scrollToBottom("smooth")}
-              className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform relative"
+              className="w-11 h-11 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-transform relative"
               style={blurStyle}
               aria-label="Scroll to bottom"
             >
-              <ChevronDown size={20} className="text-foreground" strokeWidth={2.5} />
+              <ChevronDown size={22} className="text-foreground" strokeWidth={2.5} />
               {unreadWhileAway > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
                   {unreadWhileAway > 99 ? "99+" : unreadWhileAway}
