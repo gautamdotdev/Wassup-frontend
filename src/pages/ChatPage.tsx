@@ -531,66 +531,65 @@ const ChatPage = () => {
               </button>
 
               {showMenu && (
-                /* FIX 6: No overflow-hidden here — the submenu extends to the left and was being clipped */
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50"
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
                   style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
                   <style>{`@keyframes menuIn{from{opacity:0;transform:scale(0.88) translateY(-6px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
 
-                  {/* Clip only the rounded corners visually using a wrapper per item */}
-                  <div className="rounded-2xl overflow-hidden">
-                    {[
-                      { icon: isMuted ? <Bell size={16} strokeWidth={1.5} /> : <BellOff size={16} strokeWidth={1.5} />, label: isMuted ? "Unmute notifications" : "Mute notifications", fn: handleMuteToggle },
-                      { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: handleSearchInChat },
-                      { icon: <Pin size={16} strokeWidth={1.5} />, label: "Remove pin", fn: handleUnpinMessage },
-                      { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
-                      { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
-                    ].map((item, i, arr) => (
-                      <button key={i} onClick={item.fn}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left
-                          ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
-                      >
-                        <span className="text-muted-foreground">{item.icon}</span>
-                        {item.label}
-                      </button>
-                    ))}
-
-                    {/* FIX 6: More sub-menu — stopPropagation prevents outer mousedown handler firing */}
-                    <div className="relative border-t border-border/40">
+                  {!showMoreMenu ? (
+                    /* ── Main menu ── */
+                    <>
+                      {[
+                        { icon: isMuted ? <Bell size={16} strokeWidth={1.5} /> : <BellOff size={16} strokeWidth={1.5} />, label: isMuted ? "Unmute notifications" : "Mute notifications", fn: handleMuteToggle },
+                        { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: handleSearchInChat },
+                        { icon: <Pin size={16} strokeWidth={1.5} />, label: "Remove pin", fn: handleUnpinMessage },
+                        { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
+                        { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
+                      ].map((item, i) => (
+                        <button key={i} onClick={item.fn}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left border-b border-border/40"
+                        >
+                          <span className="text-muted-foreground">{item.icon}</span>
+                          {item.label}
+                        </button>
+                      ))}
+                      {/* More row */}
                       <button
-                        onClick={(e) => { e.stopPropagation(); setShowMoreMenu(p => !p); }}
+                        onClick={(e) => { e.stopPropagation(); setShowMoreMenu(true); }}
                         className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left"
                       >
                         <span className="text-muted-foreground"><MoreVertical size={16} strokeWidth={1.5} /></span>
                         More
-                        <ChevronRight size={14} className={`ml-auto text-muted-foreground transition-transform duration-200 ${showMoreMenu ? "rotate-90" : ""}`} />
+                        <ChevronRight size={14} className="ml-auto text-muted-foreground" />
                       </button>
-
-                      {showMoreMenu && (
-                        /* FIX 6: Render to LEFT of the main menu; positioned relative to the More row */
-                        <div
-                          className="absolute right-full top-0 mr-2 w-52 rounded-2xl overflow-hidden z-50"
-                          style={{ ...blurStyle, animation: "menuIn 0.15s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}
-                          onMouseDown={e => e.stopPropagation()} // prevent closing when clicking inside sub-menu
+                    </>
+                  ) : (
+                    /* ── More sub-menu (replaces main items) ── */
+                    <>
+                      {/* Back header */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowMoreMenu(false); }}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-semibold text-muted-foreground hover:bg-muted/60 transition-colors border-b border-border/40"
+                      >
+                        <ArrowLeft size={15} strokeWidth={2} />
+                        Back
+                      </button>
+                      {[
+                        { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true },
+                        { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
+                        { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
+                        { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
+                      ].map((item, i, arr) => (
+                        <button key={i} onClick={item.fn}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
+                            ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
+                            ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
                         >
-                          {[
-                            { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true },
-                            { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
-                            { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
-                            { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
-                          ].map((item, i, arr) => (
-                            <button key={i} onClick={item.fn}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
-                                ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
-                                ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
-                            >
-                              <span className={item.danger ? "text-red-500" : "text-muted-foreground"}>{item.icon}</span>
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                          <span className={item.danger ? "text-red-500" : "text-muted-foreground"}>{item.icon}</span>
+                          {item.label}
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
