@@ -133,19 +133,33 @@ const ChatPage = () => {
   }, [emojiPickerMode, closeMsgMenu]);
 
   /* ─── long press handlers ─── */
+  const lpStartX = useRef(0);
+  const lpStartY = useRef(0);
+
   const startLongPress = useCallback((msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    lpStartX.current = clientX;
+    lpStartY.current = clientY;
 
     longPressTimer.current = setTimeout(() => {
       if (navigator.vibrate) navigator.vibrate(30);
       setMsgMenu({ msgId: msg.id, x: clientX, y: clientY, msg });
-    }, 500);
+    }, 450);
   }, []);
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
+
+  /** Only cancel long-press if finger moved more than 10px — prevents tremor false-cancels */
+  const moveLongPress = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    const x = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const y = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    if (Math.abs(x - lpStartX.current) > 10 || Math.abs(y - lpStartY.current) > 10) {
+      cancelLongPress();
+    }
+  }, [cancelLongPress]);
 
   /* ─── camera pick ─── */
   const handleQuickCameraPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -660,9 +674,10 @@ const ChatPage = () => {
                   onMouseDown={e => { if (e.button === 0) startLongPress(msg, e); }}
                   onMouseUp={cancelLongPress}
                   onMouseLeave={cancelLongPress}
+                  onMouseMove={e => moveLongPress(e)}
                   onTouchStart={e => startLongPress(msg, e)}
                   onTouchEnd={cancelLongPress}
-                  onTouchMove={cancelLongPress}
+                  onTouchMove={e => moveLongPress(e)}
                 >
                   <SwipeRow
                     msg={msg} isMe={isMe} isLast={isLastInGroup} isLastMyMsg={isLastMyMsg}
