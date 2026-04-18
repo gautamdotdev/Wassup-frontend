@@ -121,32 +121,39 @@ export function SwipeRow({
               />
             </div>
 
-            {/* Reaction badges — overlaid at bottom edge, half sticking out */}
+            {/* Reaction badges — single-row pill overlaid at bubble bottom */}
             {grouped.length > 0 && (
-              <div className={`absolute bottom-0 ${isMe ? "right-2" : "left-2"} flex flex-wrap gap-0.5 translate-y-1/2 z-10`}>
-                {grouped.map(({ emoji, count, reacted }) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleReact(emoji)}
-                    className={`
-                      flex items-center gap-0.5 px-1.5 py-0.5
-                      rounded-full font-medium shadow-lg
-                      border border-white/10
-                      bg-[#2a2a2a] dark:bg-[#3a3a3a]
-                      transition-all duration-150 active:scale-95
-                      ${reacted
-                        ? "ring-1 ring-blue-500 bg-blue-500/10 dark:bg-blue-500/15"
-                        : "hover:bg-[#383838] dark:hover:bg-[#4a4a4a]"
-                      }
-                    `}
-                    aria-label={`${emoji} ${count} reaction${count !== 1 ? "s" : ""}`}
-                  >
-                    <span className="text-[13px] leading-none">{emoji}</span>
-                    {count >= 2 && (
-                      <span className="text-[11px] text-white/80 leading-none ml-0.5">{count}</span>
-                    )}
-                  </button>
-                ))}
+              <div
+                className={`absolute bottom-0 ${isMe ? "right-0" : "left-0"} translate-y-1/2 z-10`}
+              >
+                <div
+                  className="flex items-center"
+                  style={{
+                    background: "rgba(30,30,30,0.92)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.45)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    borderRadius: 999,
+                    padding: "2px 6px",
+                    gap: 2,
+                  }}
+                >
+                  {grouped.map(({ emoji, count, reacted }, idx) => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReact(emoji)}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 transition-all duration-150 active:scale-90"
+                      style={{ borderRight: idx < grouped.length - 1 ? "1px solid rgba(255,255,255,0.08)" : undefined }}
+                      aria-label={`${emoji} ${count} reaction${count !== 1 ? "s" : ""}`}
+                    >
+                      <span className="text-[13px] leading-none">{emoji}</span>
+                      {count >= 2 && (
+                        <span className={`text-[10px] leading-none ml-0.5 font-medium ${reacted ? "text-blue-400" : "text-white/70"}`}>{count}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 
 const STORAGE_KEY = "wassup_quick_reactions";
-const DEFAULT_REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "🔥"];
+const DEFAULT_REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "🔥"];
 
 function load(): string[] {
   try {
