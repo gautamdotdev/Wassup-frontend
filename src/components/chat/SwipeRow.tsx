@@ -2,8 +2,6 @@ import React, { useState, useRef, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { BubbleContent } from "./BubbleContent";
 import { StatusIcon } from "./StatusIcon";
-
-import { ReactionBadges } from "./ReactionBadges";
 import { Msg, GroupedReaction, MsgReaction } from "@/types/chat";
 
 const SWIPE_THRESHOLD = 45;
@@ -112,22 +110,49 @@ export function SwipeRow({
         }}
       >
         <div className="max-w-[78%]">
-          <BubbleContent
-            msg={msg} isMe={isMe} isLast={isLast}
-            chatUser={chatUser}
-            playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
-            onImageTap={onImageTap}
-          />
+          {/* Bubble + overlaid reaction badges */}
+          <div className="relative">
+            <div style={{ paddingBottom: grouped.length > 0 ? "16px" : undefined }}>
+              <BubbleContent
+                msg={msg} isMe={isMe} isLast={isLast}
+                chatUser={chatUser}
+                playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
+                onImageTap={onImageTap}
+              />
+            </div>
 
-          {/* Reaction badges */}
-          <ReactionBadges
-            reactions={grouped}
-            isMe={isMe}
-            onReact={handleReact}
-          />
+            {/* Reaction badges — overlaid at bottom edge, half sticking out */}
+            {grouped.length > 0 && (
+              <div className={`absolute bottom-0 ${isMe ? "right-2" : "left-2"} flex flex-wrap gap-0.5 translate-y-1/2 z-10`}>
+                {grouped.map(({ emoji, count, reacted }) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReact(emoji)}
+                    className={`
+                      flex items-center gap-0.5 px-1.5 py-0.5
+                      rounded-full font-medium shadow-lg
+                      border border-white/10
+                      bg-[#2a2a2a] dark:bg-[#3a3a3a]
+                      transition-all duration-150 active:scale-95
+                      ${reacted
+                        ? "ring-1 ring-blue-500 bg-blue-500/10 dark:bg-blue-500/15"
+                        : "hover:bg-[#383838] dark:hover:bg-[#4a4a4a]"
+                      }
+                    `}
+                    aria-label={`${emoji} ${count} reaction${count !== 1 ? "s" : ""}`}
+                  >
+                    <span className="text-[13px] leading-none">{emoji}</span>
+                    {count >= 2 && (
+                      <span className="text-[11px] text-white/80 leading-none ml-0.5">{count}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Timestamp + tick */}
-          <div className={`flex items-center justify-end mt-1 gap-1`}>
+          <div className={`flex items-center justify-end gap-1 ${grouped.length > 0 ? "mt-4" : "mt-1"}`}>
             {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
             {isMe && <StatusIcon status={msg.status} />}
           </div>

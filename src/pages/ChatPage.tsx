@@ -4,7 +4,7 @@ import {
   ArrowLeft, Phone, Video, MoreVertical, X, BellOff, Bell,
   Search, Pin, Image, Palette, ChevronRight, ChevronDown,
   Ban, Trash2, Download, Flag, ArrowRight, Reply, Copy,
-  Forward, Star, Info
+  Forward, Info, Plus
 } from "lucide-react";
 import { FiPlus, FiCamera, FiSend } from "react-icons/fi";
 import { toast } from "sonner";
@@ -20,6 +20,8 @@ import { Lightbox } from "@/components/chat/Lightbox";
 import { SwipeRow } from "@/components/chat/SwipeRow";
 import { PendingStrip } from "@/components/chat/PendingStrip";
 import { AttachmentPanel } from "@/components/chat/AttachmentPanel";
+import { EmojiPicker } from "@/components/chat/EmojiPicker";
+import { useQuickReactions } from "@/hooks/useQuickReactions";
 
 /* ─── types ─── */
 type MsgMenu = { msgId: string; x: number; y: number; msg: Msg } | null;
@@ -70,6 +72,16 @@ const ChatPage = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
+  /* quick reactions */
+  const { quickReactions, replaceReaction } = useQuickReactions();
+  const [emojiPickerMode, setEmojiPickerMode] = useState<"react" | { replaceIndex: number } | null>(null);
+
+  /** Closes the message context menu AND resets emoji picker mode in one shot */
+  const closeMsgMenu = useCallback(() => {
+    setMsgMenu(null);
+    setEmojiPickerMode(null);
+  }, []);
+
   /* scroll state */
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
@@ -103,20 +115,22 @@ const ChatPage = () => {
     setUnreadWhileAway(0);
   }, []);
 
-  /* ─── FIX 6: close menus on outside click ─── */
+  /* ─── close menus on outside click ─── */
   useEffect(() => {
     const fn = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowMenu(false);
         setShowMoreMenu(false);
       }
+      // Don't interfere when emoji picker is open (it handles its own backdrop)
+      if (emojiPickerMode !== null) return;
       if (msgMenuRef.current && !msgMenuRef.current.contains(e.target as Node)) {
-        setMsgMenu(null);
+        closeMsgMenu();
       }
     };
     document.addEventListener("mousedown", fn);
     return () => document.removeEventListener("mousedown", fn);
-  }, []);
+  }, [emojiPickerMode, closeMsgMenu]);
 
   /* ─── long press handlers ─── */
   const startLongPress = useCallback((msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
@@ -198,13 +212,12 @@ const ChatPage = () => {
   };
 
   /* ─── message context menu actions ─── */
-  const handleMsgReply = (msg: Msg) => { setReplyingTo(msg); setMsgMenu(null); };
-  const handleMsgCopy = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); setMsgMenu(null); };
-  const handleMsgForward = (msg: Msg) => { toast.info("Forward coming soon"); setMsgMenu(null); };
-  const handleMsgStar = (msg: Msg) => { toast.success("Message starred"); setMsgMenu(null); };
-  const handleMsgInfo = (msg: Msg) => { toast.info("Message info coming soon"); setMsgMenu(null); };
+  const handleMsgReply = (msg: Msg) => { setReplyingTo(msg); closeMsgMenu(); };
+  const handleMsgCopy = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
+  const handleMsgForward = (msg: Msg) => { toast.info("Forward coming soon"); closeMsgMenu(); };
+  const handleMsgInfo = (msg: Msg) => { toast.info("Message info coming soon"); closeMsgMenu(); };
   const handleMsgDelete = async (msg: Msg) => {
-    setMsgMenu(null);
+    closeMsgMenu();
     if (!window.confirm("Delete this message?")) return;
     try {
       await api.delete(`/messages/${msg.id}`);
@@ -449,7 +462,6 @@ const ChatPage = () => {
     { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msgMenu.msg) },
     { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msgMenu.msg), hide: !msgMenu.msg.text },
     { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msgMenu.msg) },
-    { icon: <Star size={15} strokeWidth={1.5} />, label: "Star message", fn: () => handleMsgStar(msgMenu.msg) },
     { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msgMenu.msg) },
     { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true },
   ].filter(a => !a.hide) : [];
@@ -459,24 +471,42 @@ const ChatPage = () => {
       <input ref={quickCameraRef} type="file" multiple accept="image/*,video/*" capture="environment" className="hidden" onChange={handleQuickCameraPick} />
       {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />}
 
-      {/* ── FIX 1: Message context menu — single unified panel: emoji row + actions (Image 1 style) ── */}
+      {/* ── Message context menu ── */}
       {msgMenu && (
         <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}>
           <div
             ref={msgMenuRef}
-            className="fixed w-[200px] rounded-2xl"
-            style={{ ...blurStyle, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", overflow: "hidden" }}
+            className="fixed rounded-2xl"
+            style={{ ...blurStyle, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", overflow: "hidden", width: 220 }}
           >
             <style>{`@keyframes msgMenuIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}`}</style>
-            {/* Quick emoji row — top of the menu, same panel as actions */}
-            <div className="flex items-center justify-around px-3 py-2.5 border-b border-border/30">
-              {["❤️", "👍", "😂", "😮", "😢", "🔥"].map(e => (
-                <button key={e} onClick={() => { handleReact(msgMenu.msgId, e); setMsgMenu(null); }}
-                  className="text-[20px] active:scale-90 transition-transform hover:scale-125">
+
+            {/* Quick emoji row + customize hint */}
+            <div className="flex items-center justify-around px-2 py-2.5 border-b border-border/30">
+              {quickReactions.map((e, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => { handleReact(msgMenu.msgId, e); closeMsgMenu(); }}
+                  onContextMenu={ev => { ev.preventDefault(); setEmojiPickerMode({ replaceIndex: idx }); }}
+                  title="Long-press to customize"
+                  className="text-[20px] active:scale-90 transition-transform hover:scale-125 relative group"
+                >
                   {e}
+                  {/* Tiny edit dot on hover */}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary text-[7px] text-primary-foreground
+                    flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">✎</span>
                 </button>
               ))}
+              {/* + button — opens full picker */}
+              <button
+                onClick={() => setEmojiPickerMode("react")}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors active:scale-90"
+                title="More reactions"
+              >
+                <Plus size={14} className="text-muted-foreground" />
+              </button>
             </div>
+
             {/* Action items */}
             {msgMenuActions.map((a, i) => (
               <button key={i} onClick={a.fn}
@@ -491,6 +521,23 @@ const ChatPage = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* ── Emoji picker (react or customize) ── */}
+      {emojiPickerMode !== null && msgMenu && (
+        <EmojiPicker
+          onSelect={emoji => {
+            if (emojiPickerMode === "react") {
+              handleReact(msgMenu.msgId, emoji);
+              closeMsgMenu();
+            } else {
+              // replace a quick-reaction slot, keep menu open
+              replaceReaction(emojiPickerMode.replaceIndex, emoji);
+              setEmojiPickerMode(null);
+            }
+          }}
+          onClose={closeMsgMenu}
+        />
       )}
 
       <div className="min-h-screen bg-background flex flex-col max-w-[430px] mx-auto relative">
