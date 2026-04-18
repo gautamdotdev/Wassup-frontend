@@ -608,11 +608,7 @@ const ChatPage = () => {
 
             return (
               <div key={msg.id} id={`msg-${msg.id}`}>
-                {showName && (
-                  <p className="text-[13px] font-bold text-foreground mb-1.5 mt-2">
-                    {chatUser?.name?.split(" ")[0]}
-                  </p>
-                )}
+
                 <div className={isLastInGroup ? "mb-4" : "mb-1"}
                   onMouseDown={e => { if (e.button === 0) startLongPress(msg, e); }}
                   onMouseUp={cancelLongPress}

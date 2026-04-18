@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
-import { ArrowLeft, Copy, MoreVertical } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { BubbleContent } from "./BubbleContent";
 import { StatusIcon } from "./StatusIcon";
 
@@ -7,7 +7,7 @@ import { ReactionBadges } from "./ReactionBadges";
 import { Msg, GroupedReaction, MsgReaction } from "@/types/chat";
 
 const SWIPE_THRESHOLD = 45;
-const LONG_PRESS_MS   = 500;
+const LONG_PRESS_MS = 500;
 
 /** Group raw reactions into display-ready format for a given userId */
 function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string): GroupedReaction[] {
@@ -37,20 +37,20 @@ export function SwipeRow({
   myUserId?: string;
 }) {
   // ── Swipe for reply ──────────────────────────────────────────────────────
-  const [offsetX, setOffsetX]       = useState(0);
-  const [dragging, setDragging]     = useState(false);
-  const startX                       = useRef(0);
-  const fired                        = useRef(false);
-  const swipeActive                  = useRef(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+  const fired = useRef(false);
+  const swipeActive = useRef(false);
 
   const grouped = groupReactions(msg.reactions, myUserId);
 
 
   // ── Long-press (mobile) ──────────────────────────────────────────────────
   const onTouchStart = (e: React.TouchEvent) => {
-    startX.current    = e.touches[0].clientX;
+    startX.current = e.touches[0].clientX;
     setDragging(true);
-    fired.current     = false;
+    fired.current = false;
     swipeActive.current = false;
   };
 
@@ -107,7 +107,7 @@ export function SwipeRow({
       <div
         className={`flex ${isMe ? "justify-end" : "justify-start"}`}
         style={{
-          transform:  `translateX(${isMe ? -offsetX : offsetX}px)`,
+          transform: `translateX(${isMe ? -offsetX : offsetX}px)`,
           transition: dragging ? "none" : "transform 0.28s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       >
@@ -127,21 +127,9 @@ export function SwipeRow({
           />
 
           {/* Timestamp + tick */}
-          <div className={`flex items-center mt-1 ${isMe ? "justify-end" : "justify-between"} gap-3`}>
-            {!isMe && !msg.voiceNote && (
-              <div className="flex items-center gap-2.5 ml-0.5">
-                <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                  <Copy size={13} strokeWidth={1.8} />
-                </button>
-                <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                  <MoreVertical size={13} strokeWidth={1.8} />
-                </button>
-              </div>
-            )}
-            <div className="flex items-center gap-1">
-              {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
-              {isMe && <StatusIcon status={msg.status} />}
-            </div>
+          <div className={`flex items-center justify-end mt-1 gap-1`}>
+            {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
+            {isMe && <StatusIcon status={msg.status} />}
           </div>
 
           {/* Seen label */}
