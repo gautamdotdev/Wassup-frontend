@@ -295,7 +295,12 @@ const MessengersPage = () => {
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
           onClick={() => setShowFilterModal(false)}>
           <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
-            style={{ background: "var(--background)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 -20px 60px rgba(0,0,0,0.45)", animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both" }}
+            style={{
+              background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+              border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+              boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
+              animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+            }}
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
@@ -360,7 +365,6 @@ const MessengersPage = () => {
           </div>
         </div>
       )}
-
       <div className="min-h-screen bg-background pb-28 max-w-[430px] mx-auto font-sans" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
 
         {/* ── Header ── */}

@@ -1,15 +1,16 @@
 import { X } from "lucide-react";
+import { useIsDark } from "@/hooks/useIsDark";
 
 export type ChatTheme = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose";
 
 export const THEMES: { id: ChatTheme; label: string; bg: string; bubble: string; text: string }[] = [
-  { id: "default",   label: "Default",   bg: "bg-background",  bubble: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", text: "text-foreground" },
-  { id: "ocean",     label: "Ocean",     bg: "bg-[#0a1628]",   bubble: "bg-[#0066cc]",  text: "text-white" },
-  { id: "forest",    label: "Forest",    bg: "bg-[#0d1f0d]",   bubble: "bg-[#2d7a2d]",  text: "text-white" },
-  { id: "sunset",    label: "Sunset",    bg: "bg-[#1a0a00]",   bubble: "bg-[#e85d04]",  text: "text-white" },
-  { id: "lavender",  label: "Lavender",  bg: "bg-[#13001f]",   bubble: "bg-[#8b5cf6]",  text: "text-white" },
-  { id: "midnight",  label: "Midnight",  bg: "bg-[#020c1b]",   bubble: "bg-[#1d4ed8]",  text: "text-white" },
-  { id: "rose",      label: "Rose",      bg: "bg-[#1f0010]",   bubble: "bg-[#e11d48]",  text: "text-white" },
+  { id: "default", label: "Default", bg: "bg-background", bubble: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", text: "text-foreground" },
+  { id: "ocean", label: "Ocean", bg: "bg-[#0a1628]", bubble: "bg-[#0066cc]", text: "text-white" },
+  { id: "forest", label: "Forest", bg: "bg-[#0d1f0d]", bubble: "bg-[#2d7a2d]", text: "text-white" },
+  { id: "sunset", label: "Sunset", bg: "bg-[#1a0a00]", bubble: "bg-[#e85d04]", text: "text-white" },
+  { id: "lavender", label: "Lavender", bg: "bg-[#13001f]", bubble: "bg-[#8b5cf6]", text: "text-white" },
+  { id: "midnight", label: "Midnight", bg: "bg-[#020c1b]", bubble: "bg-[#1d4ed8]", text: "text-white" },
+  { id: "rose", label: "Rose", bg: "bg-[#1f0010]", bubble: "bg-[#e11d48]", text: "text-white" },
 ];
 
 interface ThemePickerProps {
@@ -19,6 +20,8 @@ interface ThemePickerProps {
 }
 
 export function ThemePicker({ currentTheme, onSelect, onClose }: ThemePickerProps) {
+  const isDark = useIsDark();
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-end justify-center"
@@ -28,8 +31,8 @@ export function ThemePicker({ currentTheme, onSelect, onClose }: ThemePickerProp
       <div
         className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden"
         style={{
-          background: "var(--background)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+          border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
           boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
           animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
         }}
@@ -58,7 +61,6 @@ export function ThemePicker({ currentTheme, onSelect, onClose }: ThemePickerProp
               onClick={() => onSelect(t.id)}
               className={`flex flex-col items-center gap-2 group`}
             >
-              {/* Preview swatch */}
               <div className={`w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all ${currentTheme === t.id ? "border-primary scale-105" : "border-transparent"} ${t.bg}`}>
                 <div className="flex flex-col justify-end h-full p-1.5 gap-1">
                   <div className={`self-end h-3 w-[70%] rounded-full ${t.bubble} opacity-90`} />
@@ -77,12 +79,11 @@ export function ThemePicker({ currentTheme, onSelect, onClose }: ThemePickerProp
   );
 }
 
-/** Returns the CSS variables / class names for the active theme */
 export function getThemeStyles(theme: ChatTheme) {
   const t = THEMES.find(x => x.id === theme) || THEMES[0];
   return {
     myBubbleBg: t.bubble,
     myBubbleText: t.text,
-    msgBg: t.bg,   // for the full screen bg override if desired
+    msgBg: t.bg,
   };
 }
