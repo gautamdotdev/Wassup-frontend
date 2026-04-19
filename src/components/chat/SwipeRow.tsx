@@ -26,13 +26,16 @@ function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string):
 export function SwipeRow({
   msg, isMe, isLast, isLastMyMsg, onReply, chatUser,
   playingVoice, setPlayingVoice, onImageTap, onReact, myUserId = "",
+  themeBubbleBg, themeBubbleText,
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
   onImageTap: (images: string[], startIndex: number) => void;
-  onReact?: (msgId: string, emoji: string) => void;   // optional — safe if not provided
+  onReact?: (msgId: string, emoji: string) => void;
   myUserId?: string;
+  themeBubbleBg?: string;
+  themeBubbleText?: string;
 }) {
   // ── Swipe for reply ──────────────────────────────────────────────────────
   const [offsetX, setOffsetX] = useState(0);
@@ -118,6 +121,8 @@ export function SwipeRow({
                 chatUser={chatUser}
                 playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                 onImageTap={onImageTap}
+                themeBubbleBg={themeBubbleBg}
+                themeBubbleText={themeBubbleText}
               />
             </div>
 

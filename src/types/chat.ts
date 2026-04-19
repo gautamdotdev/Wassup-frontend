@@ -20,6 +20,7 @@ export interface Msg {
   reactions?: MsgReaction[];
   image?: string;
   images?: string[];
+  mediaType?: "image" | "video" | "voice";
   replyTo?: { id: string; senderId: string; text: string };
   status?: "sent" | "delivered" | "seen";
 }

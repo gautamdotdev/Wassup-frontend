@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useSocket } from "@/lib/socket";
 import { useAuth } from "@/lib/auth";
 import { MessageCircle } from "lucide-react";
+import api from "@/lib/api";
 
 interface Banner {
   id: string;
@@ -18,6 +19,7 @@ const SWIPE_DISMISS_THRESHOLD = 80;
 /**
  * Global in-app notification banner.
  * - Does NOT appear on the chat page of the sender.
+ * - Does NOT appear when the chat is muted (persisted via /chats endpoint).
  * - No X button — swipe left or right to dismiss.
  * - Clicking navigates to that chat.
  */
@@ -28,12 +30,31 @@ export function ChatNotificationBanner() {
   const location              = useLocation();
   const [banners, setBanners] = useState<Banner[]>([]);
   const timerRefs             = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Cache of chatId → isMuted
+  const mutedChats            = useRef<Set<string>>(new Set());
 
   // Parse current chatUserId from URL path: /chat/:userId
   const currentChatUserId = (() => {
     const match = location.pathname.match(/\/chat\/([^/]+)/);
     return match ? match[1] : null;
   })();
+
+  // Fetch muted chat list once on mount and refresh when chats list changes
+  useEffect(() => {
+    if (!user) return;
+    const fetchMuted = async () => {
+      try {
+        const { data } = await api.get("/chats");
+        mutedChats.current = new Set(
+          (data as any[]).filter(c => c.isMuted).map(c => {
+            const other = c.participants.find((p: any) => (p._id || p) !== user._id);
+            return other?._id || other;
+          }).filter(Boolean)
+        );
+      } catch { /* ignore */ }
+    };
+    fetchMuted();
+  }, [user]);
 
   useEffect(() => {
     if (!socket || !user) return;
@@ -51,22 +72,24 @@ export function ChatNotificationBanner() {
       // Suppress if already viewing this chat
       if (currentChatUserId && currentChatUserId === chatUserId) return;
 
+      // Suppress if muted
+      const chatId: string = (m.chatId?._id || m.chatId)?.toString();
+      if (mutedChats.current.has(chatUserId) || mutedChats.current.has(chatId)) return;
+
       const newBanner: Banner = {
         id:           `${chatUserId}-${Date.now()}`,
         senderName:   m.senderId?.name || otherUser?.name || "Someone",
         senderAvatar: m.senderId?.avatar || otherUser?.avatar,
         text:         m.text
-          || (m.mediaUrl ? "📷 Photo" : m.mediaType === "voice" ? "🎤 Voice message" : "New message"),
+          || (m.mediaUrl ? "📷 Photo" : m.mediaType === "video" ? "🎬 Video" : m.mediaType === "voice" ? "🎤 Voice message" : "New message"),
         chatUserId,
       };
 
       setBanners(prev => {
-        // Replace existing banner from same sender — don't stack
         const filtered = prev.filter(b => b.chatUserId !== chatUserId);
         return [...filtered, newBanner];
       });
 
-      // Auto-dismiss
       if (timerRefs.current[chatUserId]) clearTimeout(timerRefs.current[chatUserId]);
       timerRefs.current[chatUserId] = setTimeout(() => {
         dismiss(newBanner.id);
@@ -127,11 +150,10 @@ function SwipeableBanner({
   const handleTouchEnd = () => {
     setSwiping(false);
     if (Math.abs(offsetX) >= SWIPE_DISMISS_THRESHOLD) {
-      // Fly off screen then call onDismiss
       setDismissed(true);
       setTimeout(onDismiss, 280);
     } else {
-      setOffsetX(0); // snap back
+      setOffsetX(0);
     }
   };
 
