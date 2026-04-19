@@ -110,7 +110,8 @@ const BottomNav = () => {
   if (
     location.pathname.startsWith("/chat/") ||
     location.pathname === "/welcome" ||
-    location.pathname === "/login"
+    location.pathname === "/login" ||
+    location.pathname === "/archived"
   ) return null;
 
 
