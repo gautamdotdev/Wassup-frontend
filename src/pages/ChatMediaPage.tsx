@@ -5,6 +5,7 @@ import api from "../lib/api";
 import { toast } from "sonner";
 import { Lightbox } from "@/components/chat/Lightbox";
 import { useAuth } from "../lib/auth";
+import { useMediaUrl, isVideo, isMov } from "@/hooks/useMediaUrl";
 
 interface MediaItem {
   _id: string;
@@ -16,12 +17,53 @@ interface MediaItem {
 
 type Tab = "all" | "images" | "videos";
 
-const ChatMediaPage = () => {
-  const { userId }  = useParams<{ userId: string }>();
-  const navigate    = useNavigate();
-  const { user }    = useAuth();
+/* Per-item component so each HEIC conversion is isolated */
+const MediaThumb = ({
+  item, onClick,
+}: {
+  item: MediaItem;
+  onClick: () => void;
+}) => {
+  const isVid = isVideo(item.mediaUrl, item.mediaType);
+  const { url, loading } = useMediaUrl(isVid ? undefined : item.mediaUrl); // don't convert videos
 
-  const [chatId, setChatId]     = useState<string | null>(null);
+  if (loading) {
+    return <div className="aspect-square bg-secondary animate-pulse" />;
+  }
+
+  if (isVid) {
+    return (
+      <button onClick={onClick} className="relative aspect-square bg-secondary overflow-hidden group">
+        <video
+          src={item.mediaUrl}
+          className="w-full h-full object-cover"
+          preload="metadata"
+          playsInline
+          muted
+        >
+          {isMov(item.mediaUrl) && <source src={item.mediaUrl} type="video/quicktime" />}
+        </video>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Play size={20} className="text-white" fill="white" />
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className="relative aspect-square bg-secondary overflow-hidden group">
+      <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+    </button>
+  );
+};
+
+const ChatMediaPage = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const navigate   = useNavigate();
+  const { user }   = useAuth();
+
   const [chatUser, setChatUser] = useState<any>(null);
   const [media, setMedia]       = useState<MediaItem[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -32,10 +74,8 @@ const ChatMediaPage = () => {
     const load = async () => {
       try {
         const { data: chatData } = await api.post("/chats", { userId });
-        setChatId(chatData._id);
         const other = chatData.participants.find((p: any) => p._id !== user?._id);
         setChatUser(other);
-
         const { data } = await api.get(`/chats/${chatData._id}/media`);
         setMedia(data.filter((m: MediaItem) => m.mediaType !== "voice"));
       } catch { toast.error("Failed to load media"); }
@@ -46,11 +86,12 @@ const ChatMediaPage = () => {
 
   const filtered = media.filter(m =>
     tab === "all"    ? true :
-    tab === "images" ? m.mediaType !== "video" :
-    m.mediaType === "video"
+    tab === "images" ? !isVideo(m.mediaUrl, m.mediaType) :
+    isVideo(m.mediaUrl, m.mediaType)
   );
 
-  const imageUrls = filtered.filter(m => m.mediaType !== "video").map(m => m.mediaUrl);
+  // For lightbox we only pass image URLs (not videos)
+  const imageItems = filtered.filter(m => !isVideo(m.mediaUrl, m.mediaType));
 
   return (
     <div className="min-h-screen bg-background max-w-[430px] mx-auto flex flex-col">
@@ -69,8 +110,6 @@ const ChatMediaPage = () => {
           </div>
           <span className="text-[12px] text-muted-foreground">{filtered.length} items</span>
         </div>
-
-        {/* Tabs */}
         <div className="flex gap-0 -mx-4 px-4">
           {(["all", "images", "videos"] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -85,7 +124,6 @@ const ChatMediaPage = () => {
         </div>
       </div>
 
-      {/* Grid */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground text-[14px] animate-pulse">Loading media…</div>
@@ -103,42 +141,26 @@ const ChatMediaPage = () => {
       ) : (
         <div className="px-1 pt-1 pb-8 grid grid-cols-3 gap-0.5">
           {filtered.map((item, i) => {
-            const isVideo = item.mediaType === "video";
+            const isVid = isVideo(item.mediaUrl, item.mediaType);
             return (
-              <button
-                key={item._id}
-                onClick={() => {
-                  if (isVideo) return; // video: just let it play inline
-                  const imgs = filtered.filter(m => m.mediaType !== "video").map(m => m.mediaUrl);
-                  const idx  = imgs.indexOf(item.mediaUrl);
-                  if (idx >= 0) setLightbox({ images: imgs, index: idx });
-                }}
-                className="relative aspect-square bg-secondary overflow-hidden group"
-              >
-                {isVideo ? (
-                  <div className="w-full h-full relative">
-                    <video src={item.mediaUrl} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        <Play size={20} className="text-white" fill="white" />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={item.mediaUrl} alt=""
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                )}
+              <div key={item._id} className="relative">
+                <MediaThumb
+                  item={item}
+                  onClick={() => {
+                    if (isVid) return;
+                    const idx = imageItems.findIndex(m => m._id === item._id);
+                    if (idx >= 0) setLightbox({ images: imageItems.map(m => m.mediaUrl), index: idx });
+                  }}
+                />
                 {/* Date label on first item of each day */}
                 {(i === 0 || new Date(filtered[i - 1].createdAt).toDateString() !== new Date(item.createdAt).toDateString()) && (
-                  <div className="absolute top-1 left-1.5">
+                  <div className="absolute top-1 left-1.5 pointer-events-none">
                     <span className="text-[9px] font-medium text-white bg-black/50 rounded-full px-1.5 py-0.5 backdrop-blur-sm">
                       {new Date(item.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })}
                     </span>
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>

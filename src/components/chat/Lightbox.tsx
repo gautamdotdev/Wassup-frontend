@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMediaUrl } from "@/hooks/useMediaUrl";
+
+function HeicImage({ src, className, style, alt, draggable }: { src: string; className?: string; style?: React.CSSProperties; alt?: string; draggable?: boolean }) {
+  const { url, loading } = useMediaUrl(src);
+  if (loading) {
+    return <div className={`animate-pulse bg-muted ${className}`} style={style} />;
+  }
+  return <img src={url} alt={alt} className={className} style={style} draggable={draggable} />;
+}
 
 export function Lightbox({ images, startIndex, onClose }: { images: string[]; startIndex: number; onClose: () => void }) {
   const [idx, setIdx] = useState(startIndex);
@@ -60,7 +69,7 @@ export function Lightbox({ images, startIndex, onClose }: { images: string[]; st
           </button>
         )}
 
-        <img
+        <HeicImage
           key={idx}
           src={images[idx]}
           alt=""
@@ -89,7 +98,7 @@ export function Lightbox({ images, startIndex, onClose }: { images: string[]; st
               className={`w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all duration-200 ${i === idx ? "border-white scale-105 opacity-100" : "border-transparent opacity-40 hover:opacity-60"
                 }`}
             >
-              <img src={src} className="w-full h-full object-cover" alt="" />
+              <HeicImage src={src} className="w-full h-full object-cover" alt="" />
             </button>
           ))}
         </div>

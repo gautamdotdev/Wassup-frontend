@@ -2,6 +2,7 @@ import React from "react";
 import { Play, Pause } from "lucide-react";
 import { ImageGrid } from "./ImageGrid";
 import { Msg } from "@/types/chat";
+import { MediaRenderer } from "./MediaRenderer";
 
 /**
  * Bubble background logic:
@@ -62,7 +63,7 @@ export function BubbleContent({
     return (
       <div className={`${radiusClass} overflow-hidden border border-black/[0.06] dark:border-white/[0.08]`}
         style={{ minWidth: 180, maxWidth: 260 }}>
-        <video src={msg.images[0]} controls playsInline className="w-full max-h-64 object-cover bg-black" />
+        <MediaRenderer src={msg.images[0]} mediaType="video" className="w-full max-h-64 object-cover bg-black" />
         {msg.text && (
           <div className={`px-3 py-2 ${bubbleBg}`}>
             <p className={`text-[14px] leading-[1.55] ${textClass}`}>{msg.text}</p>
@@ -114,7 +115,7 @@ export function BubbleContent({
         <p className={`text-[14px] leading-[1.55] flex-1 ${textClass}`}>{msg.text}</p>
         {msg.image && (
           <button onClick={() => onImageTap([msg.image!], 0)}>
-            <img src={msg.image} className="w-14 h-14 rounded-xl object-cover shrink-0 border border-black/[0.08]" alt="" />
+            <MediaRenderer src={msg.image} className="w-14 h-14 rounded-xl object-cover shrink-0 border border-black/[0.08]" />
           </button>
         )}
       </div>
