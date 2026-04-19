@@ -60,6 +60,14 @@ const ChatPage = () => {
     : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
   const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
 
+  // Solid sheet bg (same pattern as FilterModal fix):
+  const sheetBg = {
+    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
+    animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+  };
+
   /* refs */
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -580,13 +588,13 @@ const ChatPage = () => {
 
       {showThemePicker && <ThemePicker currentTheme={chatTheme} onSelect={applyTheme} onClose={() => setShowThemePicker(false)} />}
 
-      {/* Message info sheet */}
+      {/* Message info sheet — fixed bg */}
       {msgInfoOpen && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center"
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
           onClick={() => setMsgInfoOpen(null)}>
           <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
-            style={{ background: "var(--background)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 -20px 60px rgba(0,0,0,0.45)", animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both" }}
+            style={sheetBg}
             onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-muted-foreground/30" /></div>
             <div className="px-6 pt-3 pb-2 flex items-center justify-between border-b border-border/30">

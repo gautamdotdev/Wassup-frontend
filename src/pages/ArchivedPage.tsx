@@ -23,9 +23,7 @@ const ArchivedPage = () => {
 
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
     };
     document.addEventListener("mousedown", fn);
     return () => document.removeEventListener("mousedown", fn);
@@ -33,6 +31,10 @@ const ArchivedPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col max-w-[430px] mx-auto relative bg-background">
+      <style>{`
+        @keyframes menuIn { from{opacity:0;transform:scale(0.88) translateY(-6px)} to{opacity:1;transform:scale(1) translateY(0)} }
+      `}</style>
+
       {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-md bg-background/50">
         <div className="flex items-center gap-3 px-4 py-3 pb-4">
@@ -46,7 +48,8 @@ const ArchivedPage = () => {
 
           <div className="flex items-center gap-1 text-muted-foreground">
             <div className="relative" ref={menuRef}>
-              <button onClick={() => setShowMenu(p => !p)}
+              <button
+                onClick={() => setShowMenu(p => !p)}
                 className={`hover:text-foreground transition-colors p-1.5 rounded-full ${showMenu ? "text-foreground bg-muted" : ""}`}>
                 <MoreVertical size={20} strokeWidth={1.5} />
               </button>
@@ -103,10 +106,6 @@ const ArchivedPage = () => {
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes menuIn { from{opacity:0;transform:scale(0.88) translateY(-6px)} to{opacity:1;transform:scale(1) translateY(0)} }
-      `}</style>
     </div>
   );
 };
