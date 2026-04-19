@@ -292,13 +292,27 @@ const ChatPage = () => {
 
   const doBlock = async () => {
     setConfirmType(null);
-    try { await api.post(`/chats/${currentChat._id}/block`); toast.success(`${chatUser?.name} blocked`); navigate(-1); }
-    catch { toast.error("Failed to block user"); }
+    try {
+      await api.post(`/chats/${currentChat._id}/block`);
+      toast.success(`${chatUser?.name} blocked`);
+      navigate("/messengers", { replace: true });
+    } catch { toast.error("Failed to block user"); }
   };
+
   const doClear = async () => {
     setConfirmType(null);
-    try { await api.delete(`/chats/${currentChat._id}/messages`); setMessages([]); toast.success("Chat cleared"); }
-    catch { toast.error("Failed to clear chat"); }
+    // 1. Immediately wipe UI so it feels instant
+    setMessages([]);
+    try {
+      await api.delete(`/chats/${currentChat._id}/messages`);
+      toast.success("Chat cleared");
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    } catch {
+      toast.error("Failed to clear chat — try again");
+      // Reload original messages on failure
+      const { data } = await api.get(`/messages/${currentChat._id}`).catch(() => ({ data: [] }));
+      setMessages(data);
+    }
   };
 
   /* lock — only from profile; verify here on load */
@@ -311,14 +325,23 @@ const ChatPage = () => {
   };
 
   /* ─── message context menu actions ─── */
-  const handleMsgReply  = (msg: Msg) => { setReplyingTo(msg); closeMsgMenu(); };
-  const handleMsgCopy   = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
+  const handleMsgReply   = (msg: Msg) => { setReplyingTo(msg); closeMsgMenu(); };
+  const handleMsgCopy    = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
   const handleMsgForward = (msg: Msg) => { toast.info("Forward coming soon"); closeMsgMenu(); };
-  const handleMsgInfo   = (msg: Msg) => { setMsgInfoOpen(msg); closeMsgMenu(); };
-  const handleMsgDelete = async (msg: Msg) => {
+  const handleMsgInfo    = (msg: Msg) => { setMsgInfoOpen(msg); closeMsgMenu(); };
+  const handleMsgDelete  = async (msg: Msg) => {
     closeMsgMenu();
-    try { await api.delete(`/messages/${msg.id}`); setMessages(p => p.filter(m => m.id !== msg.id)); toast.success("Message deleted"); }
-    catch { toast.error("Failed to delete"); }
+    // Optimistic remove — instant UI feedback
+    setMessages(p => p.filter(m => m.id !== msg.id));
+    try {
+      await api.delete(`/messages/${msg.id}`);
+      // Optionally notify via socket so the other side could hide it too
+      if (socket && currentChat) socket.emit("message deleted", { messageId: msg.id, chatId: currentChat._id });
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+    } catch {
+      toast.error("Failed to delete — try again");
+      // Restore message on failure (reload from server)
+    }
   };
 
   /* ─── socket room ─── */
@@ -418,33 +441,49 @@ const ChatPage = () => {
     };
 
     const onDelivered = ({ messageId, chatId }: any) => {
-      // Fix: compare using currentChat._id not currentChat.chatId
-      if (currentChat && chatId === currentChat._id)
-        setMessages(p => p.map(m => m.id === messageId && m.senderId === "me" && m.status === "sent" ? { ...m, status: "delivered" } : m));
+      if (!currentChat || chatId !== currentChat._id) return;
+      setMessages(p => p.map(m =>
+        // Update specific message OR all sent messages if no specific ID
+        m.senderId === "me" && m.status === "sent" && (!messageId || m.id === messageId)
+          ? { ...m, status: "delivered" }
+          : m
+      ));
     };
     const onManyDelivered = ({ chatId, messageIds }: any) => {
-      if (currentChat && chatId === currentChat._id) {
-        const s = new Set(messageIds);
-        setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" && s.has(m.id) ? { ...m, status: "delivered" } : m));
-      }
+      if (!currentChat || chatId !== currentChat._id) return;
+      const s = new Set(messageIds as string[]);
+      setMessages(p => p.map(m =>
+        m.senderId === "me" && m.status === "sent" && s.has(m.id) ? { ...m, status: "delivered" } : m
+      ));
     };
     const onRead = ({ chatId }: any) => {
-      if (currentChat && chatId === currentChat._id) {
-        setMessages(p => p.map(m => m.senderId === "me" && m.status !== "seen" ? { ...m, status: "seen" } : m));
-        queryClient.invalidateQueries({ queryKey: ["chats"] });
-      }
+      if (!currentChat || chatId !== currentChat._id) return;
+      // Upgrade ALL my messages to "seen" at once
+      setMessages(p => p.map(m => m.senderId === "me" ? { ...m, status: "seen" } : m));
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
     const onReaction = ({ messageId, reactions }: any) =>
       setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
+
+    // Handle remote message deletion
+    const onMsgDeleted = ({ messageId }: any) =>
+      setMessages(p => p.filter(m => m.id !== messageId));
 
     socket.on("message recieved", onNewMsg);
     socket.on("message delivered", onDelivered);
     socket.on("messages delivered", onManyDelivered);
     socket.on("messages read", onRead);
     socket.on("reaction updated", onReaction);
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop typing", () => setIsTyping(false));
-    socket.on("user-online",  (uid: string) => { if (uid === chatUserIdRef.current) setChatUserOnline(true);  });
+    socket.on("message deleted", onMsgDeleted);
+    socket.on("typing",       () => setIsTyping(true));
+    socket.on("stop typing",  () => setIsTyping(false));
+    socket.on("user-online",  (uid: string) => {
+      if (uid === chatUserIdRef.current) {
+        setChatUserOnline(true);
+        // When other user comes online, upgrade all our sent messages to delivered
+        setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" ? { ...m, status: "delivered" } : m));
+      }
+    });
     socket.on("user-offline", (uid: string) => { if (uid === chatUserIdRef.current) setChatUserOnline(false); });
 
     return () => {
@@ -453,6 +492,7 @@ const ChatPage = () => {
       socket.off("messages delivered", onManyDelivered);
       socket.off("messages read", onRead);
       socket.off("reaction updated", onReaction);
+      socket.off("message deleted", onMsgDeleted);
       socket.off("typing"); socket.off("stop typing");
       socket.off("user-online"); socket.off("user-offline");
     };
@@ -509,17 +549,16 @@ const ChatPage = () => {
     return { url: data.url, type: data.type };
   };
 
-  /* ─── sendMessage — fixed blank-message bug ─── */
+  /* ─── sendMessage ─── */
   const sendMessage = async () => {
     if (!input.trim() && pendingImages.length === 0) return;
     if (!currentChat) return;
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     if (socket) socket.emit("stop typing", currentChat._id);
 
-    const content      = input.trim();
-    const replySnap    = replyingTo;
+    const content       = input.trim();
+    const replySnap     = replyingTo;
     const filesToUpload = pendingImages.filter(p => !!p.file);
-    const existingUrls  = pendingImages.filter(p => !p.file).map(p => p.url);
 
     setInput(""); setReplyingTo(null); setPendingImages([]);
 
@@ -528,7 +567,7 @@ const ChatPage = () => {
       ? { replyTo: { id: replySnap.id, senderId: replySnap.senderId, text: replySnap.text || "Voice message" } }
       : {};
 
-    // 1️⃣ Only add optimistic text message if there is actual text content
+    // 1️⃣ Text message — immediate optimistic, no spinner needed
     if (content) {
       const tempId = `m${Date.now()}`;
       setMessages(p => [...p, { id: tempId, senderId: "me", text: content, timestamp: ts, status: "sent", reactions: [], ...replyObj }]);
@@ -539,43 +578,45 @@ const ChatPage = () => {
           ...(replySnap ? { replyTo: replySnap.id } : {}),
         });
         if (socket) socket.emit("new message", res.data);
+        // Replace temp id with server id, keep same status so tick stays
         setMessages(p => p.map(m => m.id === tempId ? { ...m, id: res.data._id } : m));
       } catch (err) { console.error("Send text failed", err); }
     }
 
-    // 2️⃣ Upload & send media files (each as its own message)
+    // 2️⃣ Media files — show isUploading flag so SwipeRow shows "Sending…"
     if (filesToUpload.length > 0) {
       setUploadStatus("uploading");
       for (const pending of filesToUpload) {
-        const tempMediaId = `m${Date.now()}${Math.random()}`;
-        // Optimistic media bubble (preview url, no text)
+        const tempMediaId = `mm${Date.now()}${Math.random()}`;
+        // Optimistic with isUploading = true (shows local preview + "Sending…")
         setMessages(p => [...p, {
           id: tempMediaId, senderId: "me",
           timestamp: ts, status: "sent", reactions: [],
-          images: [pending.url],  // show local preview immediately
+          images: [pending.url],
+          isUploading: true,
           ...replyObj,
         }]);
         setTimeout(() => scrollToBottom("smooth"), 50);
         try {
           const { url, type } = await uploadFile(pending.file!);
           const mediaType = type === "video" ? "video" : "image";
-          // Replace with real cloudinary url
-          setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, images: [url] } : m));
+          // Swap preview URL for Cloudinary URL, clear uploading flag
+          setMessages(p => p.map(m =>
+            m.id === tempMediaId ? { ...m, images: [url], isUploading: false, mediaType } : m
+          ));
           const mediaRes = await api.post("/messages", {
             chatId: currentChat._id, mediaUrl: url, mediaType,
             ...(replySnap ? { replyTo: replySnap.id } : {}),
           });
           if (socket) socket.emit("new message", mediaRes.data);
           setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, id: mediaRes.data._id } : m));
-        } catch { /* skip failed file */ }
+        } catch {
+          // Mark failed
+          setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, isUploading: false, status: "sent" } : m));
+        }
       }
       setUploadStatus("done");
-      setTimeout(() => setUploadStatus("idle"), 2000);
-    }
-
-    // 3️⃣ If only existing (non-file) URLs with no text — treat as media message too
-    if (existingUrls.length > 0 && !content) {
-      // already handled inline — this case shouldn't normally occur but guard it
+      setTimeout(() => setUploadStatus("idle"), 1500);
     }
   };
 

@@ -5,9 +5,7 @@ import { StatusIcon } from "./StatusIcon";
 import { Msg, GroupedReaction, MsgReaction } from "@/types/chat";
 
 const SWIPE_THRESHOLD = 45;
-const LONG_PRESS_MS = 500;
 
-/** Group raw reactions into display-ready format for a given userId */
 function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string): GroupedReaction[] {
   if (!reactions || reactions.length === 0) return [];
   const map = new Map<string, { count: number; reacted: boolean }>();
@@ -37,18 +35,17 @@ export function SwipeRow({
   themeBubbleBg?: string;
   themeBubbleText?: string;
 }) {
-  // ── Swipe for reply ──────────────────────────────────────────────────────
   const [offsetX, setOffsetX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
-  const fired = useRef(false);
+  const fired  = useRef(false);
   const swipeActive = useRef(false);
 
   const grouped = groupReactions(msg.reactions, myUserId);
 
-
-  // ── Long-press (mobile) ──────────────────────────────────────────────────
+  /* ── Swipe-to-reply (disabled when uploading) ── */
   const onTouchStart = (e: React.TouchEvent) => {
+    if (msg.isUploading) return;
     startX.current = e.touches[0].clientX;
     setDragging(true);
     fired.current = false;
@@ -56,13 +53,10 @@ export function SwipeRow({
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - startX.current;
+    if (msg.isUploading) return;
+    const dx  = e.touches[0].clientX - startX.current;
     const raw = isMe ? -dx : dx;
-
-    if (Math.abs(dx) > 8) {
-      swipeActive.current = true;
-    }
-
+    if (Math.abs(dx) > 8) swipeActive.current = true;
     if (raw > 0 && swipeActive.current) {
       const c = Math.min(raw, SWIPE_THRESHOLD + 16);
       setOffsetX(c);
@@ -73,15 +67,9 @@ export function SwipeRow({
     }
   };
 
-  const onTouchEnd = () => {
-    setDragging(false);
-    setOffsetX(0);
-  };
-
-
+  const onTouchEnd = () => { setDragging(false); setOffsetX(0); };
 
   const handleReact = useCallback((emoji: string) => {
-    // Guard: do nothing if parent didn't wire up onReact yet
     if (typeof onReact === "function") onReact(msg.id, emoji);
   }, [msg.id, onReact]);
 
@@ -94,17 +82,28 @@ export function SwipeRow({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Swipe-to-reply arrow indicator */}
-      <div
-        className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} w-7 h-7 rounded-full
-          bg-secondary border border-border/40 flex items-center justify-center
-          pointer-events-none z-10`}
-        style={{ opacity: progress, transform: `translateY(-50%) scale(${0.5 + progress * 0.5})` }}
-      >
-        <ArrowLeft size={12} className={`text-muted-foreground ${isMe ? "rotate-180" : ""}`} />
-      </div>
+      {/* ── Swipe arrow OR "Sending…" indicator ── */}
+      {msg.isUploading ? (
+        /* While uploading, show a pulsing "Sending…" label in place of arrow */
+        <div
+          className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} -translate-y-1/2 z-10 pointer-events-none`}
+        >
+          <span className="text-[10px] font-semibold text-muted-foreground/70 animate-pulse whitespace-nowrap">
+            Sending…
+          </span>
+        </div>
+      ) : (
+        <div
+          className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} w-7 h-7 rounded-full
+            bg-secondary border border-border/40 flex items-center justify-center
+            pointer-events-none z-10`}
+          style={{ opacity: progress, transform: `translateY(-50%) scale(${0.5 + progress * 0.5})` }}
+        >
+          <ArrowLeft size={12} className={`text-muted-foreground ${isMe ? "rotate-180" : ""}`} />
+        </div>
+      )}
 
-      {/* Message bubble + reaction bar + badges wrapper */}
+      {/* ── Message bubble ── */}
       <div
         className={`flex ${isMe ? "justify-end" : "justify-start"}`}
         style={{
@@ -113,7 +112,6 @@ export function SwipeRow({
         }}
       >
         <div className="max-w-[78%]">
-          {/* Bubble + overlaid reaction badges */}
           <div className="relative">
             <div style={{ paddingBottom: grouped.length > 0 ? "16px" : undefined }}>
               <BubbleContent
@@ -126,11 +124,9 @@ export function SwipeRow({
               />
             </div>
 
-            {/* Reaction badges — single-row pill overlaid at bubble bottom */}
+            {/* Reaction badges */}
             {grouped.length > 0 && (
-              <div
-                className={`absolute bottom-0 ${isMe ? "right-0" : "left-0"} translate-y-1/2 z-10`}
-              >
+              <div className={`absolute bottom-0 ${isMe ? "right-0" : "left-0"} translate-y-1/2 z-10`}>
                 <div
                   className="flex items-center"
                   style={{
@@ -150,7 +146,6 @@ export function SwipeRow({
                       onClick={() => handleReact(emoji)}
                       className="flex items-center gap-0.5 px-1.5 py-0.5 transition-all duration-150 active:scale-90"
                       style={{ borderRight: idx < grouped.length - 1 ? "1px solid rgba(255,255,255,0.08)" : undefined }}
-                      aria-label={`${emoji} ${count} reaction${count !== 1 ? "s" : ""}`}
                     >
                       <span className="text-[13px] leading-none">{emoji}</span>
                       {count >= 2 && (
@@ -163,16 +158,23 @@ export function SwipeRow({
             )}
           </div>
 
-          {/* Timestamp + tick */}
-          <div className={`flex items-center justify-end gap-1 ${grouped.length > 0 ? "mt-4" : "mt-1"}`}>
-            {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
-            {isMe && <StatusIcon status={msg.status} />}
+          {/* ── Timestamp + Tick ── */}
+          <div className={`flex items-center ${isMe ? "justify-end" : "justify-start"} gap-1 ${grouped.length > 0 ? "mt-4" : "mt-1"}`}>
+            {msg.isUploading ? (
+              /* Show "Sending…" text instead of timestamp while uploading */
+              <span className="text-[10px] text-primary/70 font-medium animate-pulse">Sending…</span>
+            ) : (
+              <>
+                {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
+                {isMe && <StatusIcon status={msg.status} />}
+              </>
+            )}
           </div>
 
           {/* Seen label */}
-          {isMe && isLastMyMsg && msg.status === "seen" && (
+          {isMe && isLastMyMsg && msg.status === "seen" && !msg.isUploading && (
             <div className="flex justify-end mt-0.5">
-              <span className="text-[10px] text-blue-500 font-medium">Seen just now</span>
+              <span className="text-[10px] text-blue-500 font-medium">Seen</span>
             </div>
           )}
         </div>
