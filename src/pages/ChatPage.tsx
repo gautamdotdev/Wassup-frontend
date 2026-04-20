@@ -637,41 +637,31 @@ const ChatPage = () => {
       {msgMenu && (
         <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setMsgMenu(null)} onTouchStart={() => setMsgMenu(null)}>
-          <div ref={msgMenuRef} 
-            className={`fixed rounded-2xl overflow-hidden ${chatTheme !== "default" ? themeColors.mine : ""}`}
-            style={{ 
-              ...(chatTheme === "default" ? dropdownBg : { boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }), 
-              ...getMsgMenuStyle(), 
-              animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", 
-              width: 220 
-            }}
+          <div ref={msgMenuRef} className="fixed rounded-2xl overflow-hidden"
+            style={{ ...dropdownBg, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
             {/* Quick emoji row */}
-            <div className={`flex items-center justify-around px-2 py-2.5 ${chatTheme !== "default" ? "border-b border-white/20" : "border-b border-border/30"}`}>
+            <div className="flex items-center justify-around px-2 py-2.5 border-b border-border/30">
               {quickReactions.map((e, idx) => (
                 <button key={idx}
                   onClick={() => { handleReact(msgMenu.msgId, e); closeMsgMenu(); }}
                   onContextMenu={ev => { ev.preventDefault(); setEmojiPickerMode({ replaceIndex: idx }); }}
                   className="text-[20px] active:scale-90 transition-transform hover:scale-125 relative group">
                   {e}
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full text-[7px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
-                    ${chatTheme !== "default" ? "bg-white text-black" : "bg-primary text-primary-foreground"}`}>✎</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary text-[7px] text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">✎</span>
                 </button>
               ))}
               <button onClick={() => setEmojiPickerMode("react")}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors active:scale-90
-                  ${chatTheme !== "default" ? "bg-white/20 hover:bg-white/30 text-white" : "bg-muted/60 hover:bg-muted text-muted-foreground"}`}>
-                <Plus size={14} className="currentColor" />
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors active:scale-90">
+                <Plus size={14} className="text-muted-foreground" />
               </button>
             </div>
             {msgMenuActions.map((a: any, i: number) => (
               <button key={i} onClick={a.fn}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
-                  ${a.danger 
-                    ? "text-red-500 hover:bg-red-500/10" 
-                    : `${chatTheme !== "default" ? themeColors.mineText : "text-foreground"} hover:bg-muted/20`}
-                  ${i < msgMenuActions.length - 1 ? (chatTheme !== "default" ? "border-b border-white/20" : "border-b border-border/30") : ""}`}>
-                <span className={a.danger ? "text-red-500" : (chatTheme !== "default" ? themeColors.mineText : "text-muted-foreground")}>{a.icon}</span>
+                  ${a.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
+                  ${i < msgMenuActions.length - 1 ? "border-b border-border/30" : ""}`}>
+                <span className={a.danger ? "text-red-500" : "text-muted-foreground"}>{a.icon}</span>
                 {a.label}
               </button>
             ))}
