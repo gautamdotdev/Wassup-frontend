@@ -33,14 +33,14 @@ type ConfirmType = "block" | "clear" | null;
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 interface SearchHit { _id: string; text: string; createdAt: string }
 
-const THEME_BUBBLES: Record<ChatTheme, { mine: string; mineText: string; chatBg?: string }> = {
-  default: { mine: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", mineText: "text-foreground", chatBg: "" },
-  ocean: { mine: "bg-[#0066cc]", mineText: "text-white", chatBg: "bg-[#0a1628]" },
-  forest: { mine: "bg-[#2d7a2d]", mineText: "text-white", chatBg: "bg-[#0d1f0d]" },
-  sunset: { mine: "bg-[#e85d04]", mineText: "text-white", chatBg: "bg-[#1a0a00]" },
-  lavender: { mine: "bg-[#8b5cf6]", mineText: "text-white", chatBg: "bg-[#13001f]" },
-  midnight: { mine: "bg-[#1d4ed8]", mineText: "text-white", chatBg: "bg-[#020c1b]" },
-  rose: { mine: "bg-[#e11d48]", mineText: "text-white", chatBg: "bg-[#1f0010]" },
+const THEME_BUBBLES: Record<ChatTheme, { mine: string; mineText: string; chatBg?: string; hex?: string }> = {
+  default: { mine: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", mineText: "text-foreground", chatBg: "", hex: "" },
+  ocean: { mine: "bg-[#0066cc]", mineText: "text-white", chatBg: "bg-[#0a1628]", hex: "#0a1628" },
+  forest: { mine: "bg-[#2d7a2d]", mineText: "text-white", chatBg: "bg-[#0d1f0d]", hex: "#0d1f0d" },
+  sunset: { mine: "bg-[#e85d04]", mineText: "text-white", chatBg: "bg-[#1a0a00]", hex: "#1a0a00" },
+  lavender: { mine: "bg-[#8b5cf6]", mineText: "text-white", chatBg: "bg-[#13001f]", hex: "#13001f" },
+  midnight: { mine: "bg-[#1d4ed8]", mineText: "text-white", chatBg: "bg-[#020c1b]", hex: "#020c1b" },
+  rose: { mine: "bg-[#e11d48]", mineText: "text-white", chatBg: "bg-[#1f0010]", hex: "#1f0010" },
 };
 
 /* ── Pending image preview with HEIC conversion ── */
@@ -55,24 +55,7 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const isDark = useIsDark();
 
-  const pill = isDark
-    ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
-    : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
-  const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
 
-  // Solid sheet bg (same pattern as FilterModal fix):
-  const sheetBg = {
-    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-    boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
-    animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
-  };
-
-  const dropdownBg = {
-    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
-  };
 
   /* refs */
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -130,6 +113,27 @@ const ChatPage = () => {
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
 
   const quickCameraRef = useRef<HTMLInputElement>(null);
+
+  const themeColors = THEME_BUBBLES[chatTheme];
+  const isEffectiveDark = isDark || chatTheme !== "default";
+
+  const pill = isEffectiveDark
+    ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
+    : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
+  const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
+
+  const sheetBg = {
+    background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isEffectiveDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
+    animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+  };
+
+  const dropdownBg = {
+    background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isEffectiveDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+  };
 
   const closeMsgMenu = useCallback(() => { setMsgMenu(null); setEmojiPickerMode(null); }, []);
 
@@ -564,8 +568,6 @@ const ChatPage = () => {
     { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true },
   ].filter((a: any) => !a.hide) : [];
 
-  const themeColors = THEME_BUBBLES[chatTheme];
-
   return (
     <>
       <style>{`
@@ -686,10 +688,11 @@ const ChatPage = () => {
           onClose={closeMsgMenu} />
       )}
 
-      <div className={`min-h-screen flex flex-col max-w-[430px] mx-auto relative ${themeColors.chatBg || "bg-background"}`}>
+      <div className={`${chatTheme !== "default" ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative ${themeColors.chatBg || "bg-background"}`}>
 
         {/* Header */}
-        <div className="sticky top-0 z-10 backdrop-blur-md bg-background/50">
+        <div className={`sticky top-0 z-10 backdrop-blur-md transition-colors ${chatTheme === "default" ? "bg-background/80" : ""}`}
+             style={{ backgroundColor: chatTheme !== "default" ? `${themeColors.hex}E6` : undefined }}>
           {!searchOpen ? (
             <div className="flex items-center gap-3 px-4 py-3 pb-4">
               <button onClick={() => navigate(-1)} className="text-foreground hover:opacity-80 transition-opacity">
@@ -864,7 +867,8 @@ const ChatPage = () => {
         </div>
 
         {/* Bottom bar */}
-          <div className="sticky bottom-0 bg-gradient-to-t from-background via-background/90 to-transparent pb-6 pt-4 px-4 flex flex-col justify-end">
+        <div className={`sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${chatTheme === "default" ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+             style={{ background: chatTheme !== "default" ? `linear-gradient(to top, ${themeColors.hex} 0%, ${themeColors.hex}F2 70%, transparent 100%)` : undefined }}>
 
             {/* Pending strip — uses HEIC-aware MediaRenderer for previews */}
             {pendingImages.length > 0 && (
