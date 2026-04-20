@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MoreVertical, Archive, Settings, RefreshCw, BellOff } from "lucide-react";
+import { ArrowLeft, Archive, Settings, RefreshCw, BellOff } from "lucide-react";
+import { FiMoreVertical } from "react-icons/fi";
 import { toast } from "sonner";
 import { useIsDark } from "@/hooks/useIsDark";
 
@@ -15,6 +16,7 @@ const ArchivedPage = () => {
   const isDark = useIsDark();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
 
   const pill = isDark
     ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
@@ -47,15 +49,20 @@ const ArchivedPage = () => {
           </div>
 
           <div className="flex items-center gap-1 text-muted-foreground">
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowMenu(p => !p)}
-                className={`hover:text-foreground transition-colors p-1.5 rounded-full ${showMenu ? "text-foreground bg-muted" : ""}`}>
-                <MoreVertical size={20} strokeWidth={1.5} />
+            <div className="relative ml-2" ref={menuRef}>
+              <button ref={moreBtnRef} onClick={() => setShowMenu(p => !p)}
+                className={`w-10 h-10 overflow-hidden flex items-center justify-center rounded-full bg-secondary/80 text-foreground transition-colors backdrop-blur-md active:scale-95 shrink-0 ${showMenu ? "bg-muted" : ""}`}>
+                <FiMoreVertical size={20} />
               </button>
               {showMenu && (
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
-                  style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
+                  style={{
+                    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+                    animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both",
+                    transformOrigin: "top right"
+                  }}>
                   {[
                     { icon: <Settings size={16} strokeWidth={1.5} />, label: "Archive settings", fn: () => { setShowMenu(false); toast.info("Archive settings"); } },
                     { icon: <BellOff size={16} strokeWidth={1.5} />, label: "Mark all as read", fn: () => { setShowMenu(false); toast.info("All marked as read"); } },

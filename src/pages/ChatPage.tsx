@@ -68,6 +68,12 @@ const ChatPage = () => {
     animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
   };
 
+  const dropdownBg = {
+    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+  };
+
   /* refs */
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -629,31 +635,41 @@ const ChatPage = () => {
       {msgMenu && (
         <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setMsgMenu(null)} onTouchStart={() => setMsgMenu(null)}>
-          <div ref={msgMenuRef} className="fixed rounded-2xl overflow-hidden"
-            style={{ ...blurStyle, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
+          <div ref={msgMenuRef} 
+            className={`fixed rounded-2xl overflow-hidden ${chatTheme !== "default" ? themeColors.mine : ""}`}
+            style={{ 
+              ...(chatTheme === "default" ? dropdownBg : { boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }), 
+              ...getMsgMenuStyle(), 
+              animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", 
+              width: 220 
+            }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
             {/* Quick emoji row */}
-            <div className="flex items-center justify-around px-2 py-2.5 border-b border-border/30">
+            <div className={`flex items-center justify-around px-2 py-2.5 ${chatTheme !== "default" ? "border-b border-white/20" : "border-b border-border/30"}`}>
               {quickReactions.map((e, idx) => (
                 <button key={idx}
                   onClick={() => { handleReact(msgMenu.msgId, e); closeMsgMenu(); }}
                   onContextMenu={ev => { ev.preventDefault(); setEmojiPickerMode({ replaceIndex: idx }); }}
                   className="text-[20px] active:scale-90 transition-transform hover:scale-125 relative group">
                   {e}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary text-[7px] text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">✎</span>
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full text-[7px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
+                    ${chatTheme !== "default" ? "bg-white text-black" : "bg-primary text-primary-foreground"}`}>✎</span>
                 </button>
               ))}
               <button onClick={() => setEmojiPickerMode("react")}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors active:scale-90">
-                <Plus size={14} className="text-muted-foreground" />
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors active:scale-90
+                  ${chatTheme !== "default" ? "bg-white/20 hover:bg-white/30 text-white" : "bg-muted/60 hover:bg-muted text-muted-foreground"}`}>
+                <Plus size={14} className="currentColor" />
               </button>
             </div>
             {msgMenuActions.map((a: any, i: number) => (
               <button key={i} onClick={a.fn}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
-                  ${a.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
-                  ${i < msgMenuActions.length - 1 ? "border-b border-border/30" : ""}`}>
-                <span className={a.danger ? "text-red-500" : "text-muted-foreground"}>{a.icon}</span>
+                  ${a.danger 
+                    ? "text-red-500 hover:bg-red-500/10" 
+                    : `${chatTheme !== "default" ? themeColors.mineText : "text-foreground"} hover:bg-muted/20`}
+                  ${i < msgMenuActions.length - 1 ? (chatTheme !== "default" ? "border-b border-white/20" : "border-b border-border/30") : ""}`}>
+                <span className={a.danger ? "text-red-500" : (chatTheme !== "default" ? themeColors.mineText : "text-muted-foreground")}>{a.icon}</span>
                 {a.label}
               </button>
             ))}
@@ -703,7 +719,7 @@ const ChatPage = () => {
                   </button>
                   {showMenu && (
                     <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
-                      style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
+                      style={{ ...dropdownBg, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
                       {!showMoreMenu ? (
                         <>
                           {[
@@ -848,64 +864,67 @@ const ChatPage = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-background via-background/90 to-transparent pb-6 pt-4 px-4">
-          {replyingTo && (
-            <div className="pb-3">
-              <div className="flex items-center gap-2 bg-[#f0f0f0]/95 dark:bg-[#2a2a2a]/95 backdrop-blur-md border border-black/[0.06] dark:border-white/[0.08] shadow-sm rounded-2xl px-3 py-2.5">
-                <div className="w-[3px] h-9 bg-foreground/30 rounded-full shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-foreground/60 mb-0.5">
-                    Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground truncate">{replyingTo.voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
-                </div>
-                <button onClick={() => setReplyingTo(null)} className="w-7 h-7 rounded-full bg-secondary hover:opacity-80 flex items-center justify-center shrink-0 transition-opacity">
-                  <X size={14} className="text-muted-foreground" />
+          <div className="sticky bottom-0 bg-gradient-to-t from-background via-background/90 to-transparent pb-6 pt-4 px-4 flex flex-col justify-end">
+
+            {/* Pending strip — uses HEIC-aware MediaRenderer for previews */}
+            {pendingImages.length > 0 && (
+              <div className="flex gap-2 pb-3 overflow-x-auto">
+                {pendingImages.map((p, i) => (
+                  <div key={i} className="relative shrink-0">
+                    {isVideo(p.url, p.file?.type) ? (
+                      <video src={p.url} className="w-16 h-16 object-cover rounded-xl" />
+                    ) : (
+                      <PendingPreviewImg url={p.url} />
+                    )}
+                    <button type="button" onClick={() => removePending(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center pointer-events-auto">
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {showAttachPanel ? (
+              <div className="rounded-[32px] pt-5 pb-0" style={{ ...blurStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
+                <AttachmentPanel onClose={() => setShowAttachPanel(false)} onAddImages={addPending} />
+              </div>
+            ) : (
+              <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
+                <button onClick={() => setShowAttachPanel(true)}
+                  className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform" style={blurStyle}>
+                  <FiPlus size={24} />
                 </button>
-              </div>
-            </div>
-          )}
-
-          {/* Pending strip — uses HEIC-aware MediaRenderer for previews */}
-          {pendingImages.length > 0 && (
-            <div className="flex gap-2 pb-3 overflow-x-auto">
-              {pendingImages.map((p, i) => (
-                <div key={i} className="relative shrink-0">
-                  {isVideo(p.url, p.file?.type) ? (
-                    <video src={p.url} className="w-16 h-16 object-cover rounded-xl" />
-                  ) : (
-                    <PendingPreviewImg url={p.url} />
+                <div className={`flex-1 flex flex-col overflow-hidden ${replyingTo ? 'rounded-[20px]' : 'rounded-full'}`} style={blurStyle}>
+                  {replyingTo && (
+                    <div className="flex relative items-center gap-2 bg-black/5 dark:bg-white/5 px-3 py-2 border-b border-black/5 dark:border-white/10 shadow-sm">
+                      <div className="w-[3px] h-9 bg-primary/80 rounded-full shrink-0" />
+                      <div className="flex-1 min-w-0 pr-8">
+                        <p className="text-[11.5px] font-semibold text-primary/90 mb-0.5">
+                          Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
+                        </p>
+                        <p className="text-[13px] text-muted-foreground truncate">{replyingTo.voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
+                      </div>
+                      <button type="button" 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReplyingTo(null); }} 
+                        onTouchStart={(e) => { e.stopPropagation(); setReplyingTo(null); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center shrink-0 transition-colors z-[100] cursor-pointer">
+                        <X size={14} className="text-foreground/70" />
+                      </button>
+                    </div>
                   )}
-                  <button onClick={() => removePending(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center">
-                    <X size={10} />
-                  </button>
+                  <div className="flex items-center gap-2 px-4 py-2.5">
+                    <input value={input} onChange={handleInputChange}
+                      onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
+                      className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />
+                    {hasContent
+                      ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
+                      : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>
+                    }
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {showAttachPanel ? (
-            <div className="rounded-[32px] pt-5 pb-0" style={{ ...blurStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
-              <AttachmentPanel onClose={() => setShowAttachPanel(false)} onAddImages={addPending} />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2" style={{ animation: "apFade 0.2s ease both" }}>
-              <button onClick={() => setShowAttachPanel(true)}
-                className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform" style={blurStyle}>
-                <FiPlus size={24} />
-              </button>
-              <div className="flex-1 flex items-center gap-2 rounded-full px-4 py-2.5" style={blurStyle}>
-                <input value={input} onChange={handleInputChange}
-                  onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
-                  className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />
-                {hasContent
-                  ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
-                  : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>
-                }
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     </>
