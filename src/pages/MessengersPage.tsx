@@ -68,6 +68,12 @@ const MessengersPage = () => {
     : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
   const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
 
+  const dropdownBg = {
+    background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+  };
+
   const { data: chats = [], isLoading } = useQuery({
     queryKey: ["chats"],
     queryFn: async () => { const res = await api.get("/chats"); return res.data; },
@@ -274,7 +280,7 @@ const MessengersPage = () => {
           style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setChatMenu(null)} onTouchStart={() => setChatMenu(null)}>
           <div ref={chatMenuRef} className="fixed rounded-2xl overflow-hidden"
-            style={{ ...blurStyle, ...getMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
+            style={{ ...dropdownBg, ...getMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
             {chatMenuActions.map((a, i) => (
               <button key={i} onClick={a.fn}
@@ -397,7 +403,7 @@ const MessengersPage = () => {
 
               {showSelectMenu && (
                 <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl z-50 overflow-hidden"
-                  style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
+                  style={{ ...dropdownBg, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
                   {selectMenuActions.map((a, i) => (
                     <button key={i} onClick={() => { setShowSelectMenu(false); a.fn(); }}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
@@ -438,7 +444,7 @@ const MessengersPage = () => {
                 </button>
                 {showMoreMenu && (
                   <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
-                    style={{ ...blurStyle, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
+                    style={{ ...dropdownBg, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
                     {[
                       { icon: <UserPlus size={16} strokeWidth={1.5} />, label: "New contact", fn: handleNewContact },
                       { icon: <Users size={16} strokeWidth={1.5} />, label: "New group", fn: handleNewGroup },

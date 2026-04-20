@@ -105,6 +105,15 @@ const THEME_BUBBLES: Record<ChatTheme, {
     hex: "#1f0010",
     mutedText: "text-pink-300/60",
   },
+  love: {
+    mine: "bg-[#ff4d8f]",
+    mineText: "text-white",
+    other: "bg-[#2e0020]",
+    otherText: "text-pink-100",
+    chatBg: "bg-[#1a0010]",
+    hex: "#1a0010",
+    mutedText: "text-pink-200/60",
+  },
 };
 
 /* ── Pending image preview with HEIC conversion ── */
