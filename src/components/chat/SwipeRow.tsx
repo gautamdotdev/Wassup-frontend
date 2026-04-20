@@ -25,6 +25,9 @@ export function SwipeRow({
   msg, isMe, isLast, isLastMyMsg, onReply, chatUser,
   playingVoice, setPlayingVoice, onImageTap, onReact, myUserId = "",
   themeBubbleBg, themeBubbleText,
+  themeOtherBubbleBg, themeOtherBubbleText,
+  themeMutedText,
+  MediaRenderer,
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
@@ -34,11 +37,15 @@ export function SwipeRow({
   myUserId?: string;
   themeBubbleBg?: string;
   themeBubbleText?: string;
+  themeOtherBubbleBg?: string;
+  themeOtherBubbleText?: string;
+  themeMutedText?: string;
+  MediaRenderer?: any;
 }) {
   const [offsetX, setOffsetX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
-  const fired  = useRef(false);
+  const fired = useRef(false);
   const swipeActive = useRef(false);
 
   const grouped = groupReactions(msg.reactions, myUserId);
@@ -54,7 +61,7 @@ export function SwipeRow({
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (msg.isUploading) return;
-    const dx  = e.touches[0].clientX - startX.current;
+    const dx = e.touches[0].clientX - startX.current;
     const raw = isMe ? -dx : dx;
     if (Math.abs(dx) > 8) swipeActive.current = true;
     if (raw > 0 && swipeActive.current) {
@@ -75,6 +82,13 @@ export function SwipeRow({
 
   const progress = Math.min(offsetX / SWIPE_THRESHOLD, 1);
 
+  // Pick correct bubble bg/text based on sender
+  const activeBubbleBg = isMe ? themeBubbleBg : themeOtherBubbleBg;
+  const activeBubbleText = isMe ? themeBubbleText : themeOtherBubbleText;
+
+  // Timestamp muted color — use theme-aware if provided
+  const mutedTextClass = themeMutedText || "text-muted-foreground/55";
+
   return (
     <div
       className="relative"
@@ -84,7 +98,6 @@ export function SwipeRow({
     >
       {/* ── Swipe arrow OR "Sending…" indicator ── */}
       {msg.isUploading ? (
-        /* While uploading, show a pulsing "Sending…" label in place of arrow */
         <div
           className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} -translate-y-1/2 z-10 pointer-events-none`}
         >
@@ -119,8 +132,9 @@ export function SwipeRow({
                 chatUser={chatUser}
                 playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                 onImageTap={onImageTap}
-                themeBubbleBg={themeBubbleBg}
-                themeBubbleText={themeBubbleText}
+                themeBubbleBg={activeBubbleBg}
+                themeBubbleText={activeBubbleText}
+                MediaRenderer={MediaRenderer}
               />
             </div>
 
@@ -161,11 +175,12 @@ export function SwipeRow({
           {/* ── Timestamp + Tick ── */}
           <div className={`flex items-center ${isMe ? "justify-end" : "justify-start"} gap-1 ${grouped.length > 0 ? "mt-4" : "mt-1"}`}>
             {msg.isUploading ? (
-              /* Show "Sending…" text instead of timestamp while uploading */
               <span className="text-[10px] text-primary/70 font-medium animate-pulse">Sending…</span>
             ) : (
               <>
-                {msg.timestamp && <p className="text-[11px] text-muted-foreground/55 pr-0.5">{msg.timestamp}</p>}
+                {msg.timestamp && (
+                  <p className={`text-[11px] pr-0.5 ${mutedTextClass}`}>{msg.timestamp}</p>
+                )}
                 {isMe && <StatusIcon status={msg.status} />}
               </>
             )}

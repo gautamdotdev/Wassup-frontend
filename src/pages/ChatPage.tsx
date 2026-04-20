@@ -33,14 +33,78 @@ type ConfirmType = "block" | "clear" | null;
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 interface SearchHit { _id: string; text: string; createdAt: string }
 
-const THEME_BUBBLES: Record<ChatTheme, { mine: string; mineText: string; chatBg?: string; hex?: string }> = {
-  default: { mine: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", mineText: "text-foreground", chatBg: "", hex: "" },
-  ocean: { mine: "bg-[#0066cc]", mineText: "text-white", chatBg: "bg-[#0a1628]", hex: "#0a1628" },
-  forest: { mine: "bg-[#2d7a2d]", mineText: "text-white", chatBg: "bg-[#0d1f0d]", hex: "#0d1f0d" },
-  sunset: { mine: "bg-[#e85d04]", mineText: "text-white", chatBg: "bg-[#1a0a00]", hex: "#1a0a00" },
-  lavender: { mine: "bg-[#8b5cf6]", mineText: "text-white", chatBg: "bg-[#13001f]", hex: "#13001f" },
-  midnight: { mine: "bg-[#1d4ed8]", mineText: "text-white", chatBg: "bg-[#020c1b]", hex: "#020c1b" },
-  rose: { mine: "bg-[#e11d48]", mineText: "text-white", chatBg: "bg-[#1f0010]", hex: "#1f0010" },
+const THEME_BUBBLES: Record<ChatTheme, {
+  mine: string;
+  mineText: string;
+  other: string;
+  otherText: string;
+  chatBg?: string;
+  hex?: string;
+  mutedText: string;
+}> = {
+  default: {
+    mine: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
+    mineText: "text-foreground",
+    other: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
+    otherText: "text-foreground",
+    chatBg: "",
+    hex: "",
+    mutedText: "text-muted-foreground/55",
+  },
+  ocean: {
+    mine: "bg-[#0066cc]",
+    mineText: "text-white",
+    other: "bg-[#0a2a4a]",
+    otherText: "text-blue-200",
+    chatBg: "bg-[#0a1628]",
+    hex: "#0a1628",
+    mutedText: "text-blue-300/60",
+  },
+  forest: {
+    mine: "bg-[#2d7a2d]",
+    mineText: "text-white",
+    other: "bg-[#1a3a1a]",
+    otherText: "text-green-200",
+    chatBg: "bg-[#0d1f0d]",
+    hex: "#0d1f0d",
+    mutedText: "text-green-300/60",
+  },
+  sunset: {
+    mine: "bg-[#e85d04]",
+    mineText: "text-white",
+    other: "bg-[#2a1200]",
+    otherText: "text-orange-200",
+    chatBg: "bg-[#1a0a00]",
+    hex: "#1a0a00",
+    mutedText: "text-orange-300/60",
+  },
+  lavender: {
+    mine: "bg-[#8b5cf6]",
+    mineText: "text-white",
+    other: "bg-[#220033]",
+    otherText: "text-purple-200",
+    chatBg: "bg-[#13001f]",
+    hex: "#13001f",
+    mutedText: "text-purple-300/60",
+  },
+  midnight: {
+    mine: "bg-[#1d4ed8]",
+    mineText: "text-white",
+    other: "bg-[#060f2e]",
+    otherText: "text-blue-200",
+    chatBg: "bg-[#020c1b]",
+    hex: "#020c1b",
+    mutedText: "text-blue-300/60",
+  },
+  rose: {
+    mine: "bg-[#e11d48]",
+    mineText: "text-white",
+    other: "bg-[#280010]",
+    otherText: "text-pink-200",
+    chatBg: "bg-[#1f0010]",
+    hex: "#1f0010",
+    mutedText: "text-pink-300/60",
+  },
 };
 
 /* ── Pending image preview with HEIC conversion ── */
@@ -54,8 +118,6 @@ const ChatPage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const isDark = useIsDark();
-
-
 
   /* refs */
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -121,6 +183,17 @@ const ChatPage = () => {
     ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
     : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
   const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
+
+  // Theme-aware input pill — tints with theme color on non-default themes
+  const inputPillStyle = chatTheme === "default"
+    ? blurStyle
+    : {
+      background: `${themeColors.hex}CC`,
+      border: "1px solid rgba(255,255,255,0.12)",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+      backdropFilter: "blur(20px) saturate(160%)",
+      WebkitBackdropFilter: "blur(20px) saturate(160%)",
+    };
 
   const sheetBg = {
     background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
@@ -259,11 +332,16 @@ const ChatPage = () => {
   };
   const handleMediaFiles = () => { navigate(`/chat/${userId}/media`); setShowMenu(false); };
   const handleChatTheme = () => { setShowThemePicker(true); setShowMenu(false); };
+
   const applyTheme = async (theme: ChatTheme) => {
-    setShowThemePicker(false); setChatTheme(theme);
+    setShowThemePicker(false);
+    setChatTheme(theme);
+    // Cache locally for instant load next open
+    if (userId) localStorage.setItem(`chat-theme-${userId}`, theme);
     try { await api.post(`/chats/${currentChat._id}/theme`, { theme }); }
     catch { toast.error("Failed to save theme"); }
   };
+
   const handleBlockUser = () => { setShowMenu(false); setShowMoreMenu(false); setConfirmType("block"); };
   const handleClearChat = () => { setShowMenu(false); setShowMoreMenu(false); setConfirmType("clear"); };
   const handleExportChat = async () => {
@@ -332,6 +410,11 @@ const ChatPage = () => {
   useEffect(() => {
     let active = true;
     const load = async () => {
+      // Apply cached theme immediately to prevent flash
+      if (userId) {
+        const cached = localStorage.getItem(`chat-theme-${userId}`) as ChatTheme | null;
+        if (cached) setChatTheme(cached);
+      }
       try {
         const { data: chatData } = await api.post('/chats', { userId });
         if (!active) return;
@@ -341,7 +424,11 @@ const ChatPage = () => {
         chatUserIdRef.current = other?._id ?? null;
         setChatUserOnline(!!other?.online);
         setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === user?._id));
-        setChatTheme((chatData.theme || "default") as ChatTheme);
+
+        const serverTheme = (chatData.theme || "default") as ChatTheme;
+        setChatTheme(serverTheme);
+        if (userId) localStorage.setItem(`chat-theme-${userId}`, serverTheme);
+
         const locked = !!chatData.locks?.some((l: any) => (l.user?._id || l.user) === user?._id);
         setIsLocked(locked);
         if (locked) setShowLockScreen("verify");
@@ -596,7 +683,7 @@ const ChatPage = () => {
 
       {showThemePicker && <ThemePicker currentTheme={chatTheme} onSelect={applyTheme} onClose={() => setShowThemePicker(false)} />}
 
-      {/* Message info sheet — fixed bg */}
+      {/* Message info sheet */}
       {msgInfoOpen && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center"
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
@@ -633,7 +720,7 @@ const ChatPage = () => {
           onSubmit={handleVerifyLock} />
       )}
 
-      {/* Message context menu — NO emoji row */}
+      {/* Message context menu */}
       {msgMenu && (
         <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setMsgMenu(null)} onTouchStart={() => setMsgMenu(null)}>
@@ -678,11 +765,14 @@ const ChatPage = () => {
           onClose={closeMsgMenu} />
       )}
 
-      <div className={`${chatTheme !== "default" ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative ${themeColors.chatBg || "bg-background"}`}>
+      {/* Main chat container — smooth color transition on theme change */}
+      <div className={`${chatTheme !== "default" ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 ${themeColors.chatBg || "bg-background"}`}>
 
         {/* Header */}
-        <div className={`sticky top-0 z-10 backdrop-blur-md transition-colors ${chatTheme === "default" ? "bg-background/80" : ""}`}
-             style={{ backgroundColor: chatTheme !== "default" ? `${themeColors.hex}E6` : undefined }}>
+        <div
+          className={`sticky top-0 z-10 backdrop-blur-md transition-colors duration-300 ${chatTheme === "default" ? "bg-background/80" : ""}`}
+          style={{ backgroundColor: chatTheme !== "default" ? `${themeColors.hex}E6` : undefined }}
+        >
           {!searchOpen ? (
             <div className="flex items-center gap-3 px-4 py-3 pb-4">
               <button onClick={() => navigate(-1)} className="text-foreground hover:opacity-80 transition-opacity">
@@ -821,16 +911,26 @@ const ChatPage = () => {
                     myUserId={user?._id ?? ""}
                     themeBubbleBg={themeColors.mine}
                     themeBubbleText={themeColors.mineText}
+                    themeOtherBubbleBg={themeColors.other}
+                    themeOtherBubbleText={themeColors.otherText}
+                    themeMutedText={themeColors.mutedText}
                     MediaRenderer={MediaRenderer}
                   />
                 </div>
               </div>
             );
           })}
+
+          {/* Typing indicator — uses other-bubble color */}
           <div className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{ maxHeight: isTyping ? 56 : 0, opacity: isTyping ? 1 : 0 }}>
             <div className="flex justify-start mb-4 pt-1">
-              <div className="bg-[#f0f0f0] dark:bg-[#2a2a2a] border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5">
+              <div
+                className={`border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5 ${chatTheme === "default"
+                    ? "bg-[#f0f0f0] dark:bg-[#2a2a2a]"
+                    : themeColors.other
+                  }`}
+              >
                 {[0, 180, 360].map(d => (
                   <div key={d} className="w-2 h-2 rounded-full bg-muted-foreground animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
@@ -857,68 +957,74 @@ const ChatPage = () => {
         </div>
 
         {/* Bottom bar */}
-        <div className={`sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${chatTheme === "default" ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
-             style={{ background: chatTheme !== "default" ? `linear-gradient(to top, ${themeColors.hex} 0%, ${themeColors.hex}F2 70%, transparent 100%)` : undefined }}>
+        <div
+          className={`sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${chatTheme === "default" ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          style={{ background: chatTheme !== "default" ? `linear-gradient(to top, ${themeColors.hex} 0%, ${themeColors.hex}F2 70%, transparent 100%)` : undefined }}
+        >
+          {/* Pending strip */}
+          {pendingImages.length > 0 && (
+            <div className="flex gap-2 pb-3 overflow-x-auto">
+              {pendingImages.map((p, i) => (
+                <div key={i} className="relative shrink-0">
+                  {isVideo(p.url, p.file?.type) ? (
+                    <video src={p.url} className="w-16 h-16 object-cover rounded-xl" />
+                  ) : (
+                    <PendingPreviewImg url={p.url} />
+                  )}
+                  <button type="button" onClick={() => removePending(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center pointer-events-auto">
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-            {/* Pending strip — uses HEIC-aware MediaRenderer for previews */}
-            {pendingImages.length > 0 && (
-              <div className="flex gap-2 pb-3 overflow-x-auto">
-                {pendingImages.map((p, i) => (
-                  <div key={i} className="relative shrink-0">
-                    {isVideo(p.url, p.file?.type) ? (
-                      <video src={p.url} className="w-16 h-16 object-cover rounded-xl" />
-                    ) : (
-                      <PendingPreviewImg url={p.url} />
-                    )}
-                    <button type="button" onClick={() => removePending(i)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center pointer-events-auto">
-                      <X size={10} />
+          {showAttachPanel ? (
+            <div className="rounded-[32px] pt-5 pb-0" style={{ ...inputPillStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
+              <AttachmentPanel onClose={() => setShowAttachPanel(false)} onAddImages={addPending} />
+            </div>
+          ) : (
+            <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
+              {/* + button uses same themed pill */}
+              <button onClick={() => setShowAttachPanel(true)}
+                className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                style={inputPillStyle}>
+                <FiPlus size={24} />
+              </button>
+              <div
+                className={`flex-1 flex flex-col overflow-hidden ${replyingTo ? "rounded-[20px]" : "rounded-full"}`}
+                style={inputPillStyle}
+              >
+                {replyingTo && (
+                  <div className="flex relative items-center gap-2 bg-black/5 dark:bg-white/5 px-3 py-2 border-b border-black/5 dark:border-white/10 shadow-sm">
+                    <div className="w-[3px] h-9 bg-primary/80 rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0 pr-8">
+                      <p className="text-[11.5px] font-semibold text-primary/90 mb-0.5">
+                        Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground truncate">{replyingTo.voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
+                    </div>
+                    <button type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReplyingTo(null); }}
+                      onTouchStart={(e) => { e.stopPropagation(); setReplyingTo(null); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center shrink-0 transition-colors z-[100] cursor-pointer">
+                      <X size={14} className="text-foreground/70" />
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {showAttachPanel ? (
-              <div className="rounded-[32px] pt-5 pb-0" style={{ ...blurStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
-                <AttachmentPanel onClose={() => setShowAttachPanel(false)} onAddImages={addPending} />
-              </div>
-            ) : (
-              <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
-                <button onClick={() => setShowAttachPanel(true)}
-                  className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform" style={blurStyle}>
-                  <FiPlus size={24} />
-                </button>
-                <div className={`flex-1 flex flex-col overflow-hidden ${replyingTo ? 'rounded-[20px]' : 'rounded-full'}`} style={blurStyle}>
-                  {replyingTo && (
-                    <div className="flex relative items-center gap-2 bg-black/5 dark:bg-white/5 px-3 py-2 border-b border-black/5 dark:border-white/10 shadow-sm">
-                      <div className="w-[3px] h-9 bg-primary/80 rounded-full shrink-0" />
-                      <div className="flex-1 min-w-0 pr-8">
-                        <p className="text-[11.5px] font-semibold text-primary/90 mb-0.5">
-                          Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground truncate">{replyingTo.voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
-                      </div>
-                      <button type="button" 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReplyingTo(null); }} 
-                        onTouchStart={(e) => { e.stopPropagation(); setReplyingTo(null); }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center shrink-0 transition-colors z-[100] cursor-pointer">
-                        <X size={14} className="text-foreground/70" />
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 px-4 py-2.5">
-                    <input value={input} onChange={handleInputChange}
-                      onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
-                      className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />
-                    {hasContent
-                      ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
-                      : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>
-                    }
-                  </div>
+                )}
+                <div className="flex items-center gap-2 px-4 py-2.5">
+                  <input value={input} onChange={handleInputChange}
+                    onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />
+                  {hasContent
+                    ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
+                    : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>
+                  }
                 </div>
               </div>
-            )}
+            </div>
+          )}
         </div>
       </div>
     </>

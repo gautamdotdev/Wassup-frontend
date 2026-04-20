@@ -190,7 +190,7 @@ const SearchPage = () => {
         {isConnected ? (
           <button 
             onClick={() => navigate(`/chat/${user._id}`)}
-            className="px-5 py-1.5 rounded-xl bg-foreground/5 hover:bg-foreground/[0.08] text-foreground text-[11px] font-bold transition-all active:scale-95 border border-foreground/5"
+            className="px-5 py-1.5 rounded-full bg-foreground/5 hover:bg-foreground/[0.08] text-foreground text-[11px] font-bold transition-all active:scale-95 border border-foreground/5"
           >
             Message
           </button>

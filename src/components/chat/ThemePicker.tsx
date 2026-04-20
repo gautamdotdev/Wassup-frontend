@@ -3,15 +3,87 @@ import { useIsDark } from "@/hooks/useIsDark";
 
 export type ChatTheme = "default" | "ocean" | "forest" | "sunset" | "lavender" | "midnight" | "rose";
 
-export const THEMES: { id: ChatTheme; label: string; bg: string; bubble: string; text: string }[] = [
-  { id: "default", label: "Default", bg: "bg-background", bubble: "bg-[#f0f0f0] dark:bg-[#2a2a2a]", text: "text-foreground" },
-  { id: "ocean", label: "Ocean", bg: "bg-[#0a1628]", bubble: "bg-[#0066cc]", text: "text-white" },
-  { id: "forest", label: "Forest", bg: "bg-[#0d1f0d]", bubble: "bg-[#2d7a2d]", text: "text-white" },
-  { id: "sunset", label: "Sunset", bg: "bg-[#1a0a00]", bubble: "bg-[#e85d04]", text: "text-white" },
-  { id: "lavender", label: "Lavender", bg: "bg-[#13001f]", bubble: "bg-[#8b5cf6]", text: "text-white" },
-  { id: "midnight", label: "Midnight", bg: "bg-[#020c1b]", bubble: "bg-[#1d4ed8]", text: "text-white" },
-  { id: "rose", label: "Rose", bg: "bg-[#1f0010]", bubble: "bg-[#e11d48]", text: "text-white" },
-];
+export const THEMES: {
+  id: ChatTheme;
+  label: string;
+  bg: string;
+  bubble: string;
+  text: string;
+  otherBubble: string;
+  otherText: string;
+  hex?: string;
+}[] = [
+    {
+      id: "default",
+      label: "Default",
+      bg: "bg-background",
+      bubble: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
+      text: "text-foreground",
+      otherBubble: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
+      otherText: "text-foreground",
+      hex: "",
+    },
+    {
+      id: "ocean",
+      label: "Ocean",
+      bg: "bg-[#0a1628]",
+      bubble: "bg-[#0066cc]",
+      text: "text-white",
+      otherBubble: "bg-[#0a2a4a]",
+      otherText: "text-blue-200",
+      hex: "#0a1628",
+    },
+    {
+      id: "forest",
+      label: "Forest",
+      bg: "bg-[#0d1f0d]",
+      bubble: "bg-[#2d7a2d]",
+      text: "text-white",
+      otherBubble: "bg-[#1a3a1a]",
+      otherText: "text-green-200",
+      hex: "#0d1f0d",
+    },
+    {
+      id: "sunset",
+      label: "Sunset",
+      bg: "bg-[#1a0a00]",
+      bubble: "bg-[#e85d04]",
+      text: "text-white",
+      otherBubble: "bg-[#2a1200]",
+      otherText: "text-orange-200",
+      hex: "#1a0a00",
+    },
+    {
+      id: "lavender",
+      label: "Lavender",
+      bg: "bg-[#13001f]",
+      bubble: "bg-[#8b5cf6]",
+      text: "text-white",
+      otherBubble: "bg-[#220033]",
+      otherText: "text-purple-200",
+      hex: "#13001f",
+    },
+    {
+      id: "midnight",
+      label: "Midnight",
+      bg: "bg-[#020c1b]",
+      bubble: "bg-[#1d4ed8]",
+      text: "text-white",
+      otherBubble: "bg-[#060f2e]",
+      otherText: "text-blue-200",
+      hex: "#020c1b",
+    },
+    {
+      id: "rose",
+      label: "Rose",
+      bg: "bg-[#1f0010]",
+      bubble: "bg-[#e11d48]",
+      text: "text-white",
+      otherBubble: "bg-[#280010]",
+      otherText: "text-pink-200",
+      hex: "#1f0010",
+    },
+  ];
 
 interface ThemePickerProps {
   currentTheme: ChatTheme;
@@ -59,16 +131,36 @@ export function ThemePicker({ currentTheme, onSelect, onClose }: ThemePickerProp
             <button
               key={t.id}
               onClick={() => onSelect(t.id)}
-              className={`flex flex-col items-center gap-2 group`}
+              className="flex flex-col items-center gap-2 group"
             >
-              <div className={`w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all ${currentTheme === t.id ? "border-primary scale-105" : "border-transparent"} ${t.bg}`}>
-                <div className="flex flex-col justify-end h-full p-1.5 gap-1">
-                  <div className={`self-end h-3 w-[70%] rounded-full ${t.bubble} opacity-90`} />
-                  <div className="self-start h-3 w-[55%] rounded-full bg-muted-foreground/30" />
-                  <div className={`self-end h-3 w-[50%] rounded-full ${t.bubble} opacity-90`} />
+              {console.log(t)}
+              {/* Improved preview — header strip + received + sent bubbles */}
+              <div
+                className={`w-full rounded-2xl overflow-hidden border-2 transition-all ${currentTheme === t.id ? "border-primary scale-105" : "border-transparent"
+                  } ${t.bg}`}
+                style={{ aspectRatio: "4/3" }}
+              >
+                {/* Header strip */}
+                <div className="flex items-center gap-1 px-2 pt-2 pb-1">
+                  <div className="w-3 h-3 rounded-full bg-white/20" />
+                  <div className="h-1.5 w-8 rounded-full bg-white/20" />
+                </div>
+                {/* Received bubble */}
+                <div className="px-2 mb-1.5">
+                  <div className={`h-3 w-[55%] rounded-full ${t.otherBubble} opacity-80 rounded-bl-sm`} />
+                </div>
+                {/* Sent bubbles */}
+                <div className="flex justify-end px-2 mb-1">
+                  <div className={`h-3 w-[65%] rounded-full ${t.bubble} opacity-90 rounded-br-sm`} />
+                </div>
+                <div className="flex justify-end px-2">
+                  <div className={`h-3 w-[40%] rounded-full ${t.bubble} opacity-90 rounded-br-sm`} />
                 </div>
               </div>
-              <span className={`text-[11px] font-medium ${currentTheme === t.id ? "text-primary" : "text-muted-foreground"}`}>
+              <span
+                className={`text-[11px] font-medium ${currentTheme === t.id ? "text-primary" : "text-muted-foreground"
+                  }`}
+              >
                 {t.label}
               </span>
             </button>
@@ -84,6 +176,8 @@ export function getThemeStyles(theme: ChatTheme) {
   return {
     myBubbleBg: t.bubble,
     myBubbleText: t.text,
+    otherBubbleBg: t.otherBubble,
+    otherBubbleText: t.otherText,
     msgBg: t.bg,
   };
 }

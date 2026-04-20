@@ -508,9 +508,6 @@ const MessengersPage = () => {
               <div className="px-5 py-12 text-center flex flex-col items-center gap-2">
                 <FiSearch size={32} className="text-muted-foreground/30" />
                 <p className="text-sm font-medium text-foreground">No chats found</p>
-                {activeFilter !== "All" && (
-                  <button onClick={() => setActiveFilter("All")} className="text-xs text-muted-foreground underline underline-offset-2 mt-1">Show all chats</button>
-                )}
               </div>
             )}
 
