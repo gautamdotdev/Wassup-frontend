@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Phone, Video, MoreVertical, X, BellOff, Bell,
   Search, Image, Palette, ChevronRight, ChevronDown,
@@ -26,6 +26,7 @@ import { ConfirmModal } from "@/components/chat/ConfirmModal";
 import { ThemePicker, ChatTheme, THEMES } from "@/components/chat/ThemePicker";
 import { LockScreen } from "@/components/chat/LockScreen";
 import { MediaRenderer } from "@/components/chat/MediaRenderer";
+import { Chat, User } from "@/types/chat";
 
 type MsgMenu = { msgId: string; x: number; y: number; msg: Msg } | null;
 type ConfirmType = "block" | "clear" | null;
@@ -157,6 +158,7 @@ const PendingPreviewImg = ({ url }: { url: string }) => {
 const ChatPage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isDark = useIsDark();
 
   /* refs */
@@ -188,6 +190,7 @@ const ChatPage = () => {
   const [chatUserOnline, setChatUserOnline] = useState(false);
   const [currentChat, setCurrentChat] = useState<any>(null);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<User[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Msg | null>(null);
   const [showAttachPanel, setShowAttachPanel] = useState(false);
@@ -214,6 +217,10 @@ const ChatPage = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
+
+  /* Group specific state */
+  const [isGroup, setIsGroup] = useState(false);
+  const [groupData, setGroupData] = useState<Chat | null>(null);
 
   // ── Resolve theme colors ──
   const themeDef = THEMES.find(t => t.id === chatTheme) || THEMES[0];
@@ -442,13 +449,32 @@ const ChatPage = () => {
         if (cached) setChatTheme(cached);
       }
       try {
-        const { data: chatData } = await api.post('/chats', { userId });
+        const isGroupId = location.pathname.includes('/chat/group/') || window.location.hash.includes('/chat/group/');
+        setIsGroup(isGroupId);
+
+        let chatData;
+        if (isGroupId) {
+          const res = await api.get(`/chats`);
+          chatData = res.data.find((c: any) => c._id === userId);
+          if (!chatData) throw new Error('Chat not found');
+        } else {
+          const res = await api.post('/chats', { userId });
+          chatData = res.data;
+        }
+
         if (!active) return;
         setCurrentChat(chatData);
-        const other = chatData.participants.find((p: any) => p._id !== user?._id);
-        setChatUser(other);
-        chatUserIdRef.current = other?._id ?? null;
-        setChatUserOnline(!!other?.online);
+        setGroupData(chatData);
+        
+        if (isGroupId) {
+           setChatUser({ name: chatData.chatName, avatar: chatData.avatar });
+        } else {
+          const other = chatData.participants.find((p: any) => p._id !== user?._id);
+          setChatUser(other);
+          chatUserIdRef.current = other?._id ?? null;
+          setChatUserOnline(!!other?.online);
+        }
+
         setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === user?._id));
         const serverTheme = (chatData.theme || "default") as ChatTheme;
         setChatTheme(serverTheme);
@@ -469,9 +495,12 @@ const ChatPage = () => {
             replyTo = { id: m.replyTo._id, senderId: rtId === myId ? "me" : "other", text: m.replyTo.text || "Voice message" };
           }
           return {
-            id: m._id, senderId: isMe ? "me" : "other", text: m.text,
+            id: m._id, senderId: isMe ? "me" : "other", 
+            sender: m.senderId,
+            text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
             status: isMe ? (m.tickStatus ?? "sent") : undefined,
+            readBy: m.readBy || [],
             reactions: m.reactions || [],
             ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
@@ -517,9 +546,11 @@ const ChatPage = () => {
         const newMsg: Msg = {
           id: m._id,
           senderId: isMe ? "me" : "other",
+          sender: m.senderId,
           text: m.text,
           timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
           status: isMe ? (m.tickStatus || "sent") : undefined,
+          readBy: m.readBy || [],
           reactions: m.reactions || [],
           ...(replyTo ? { replyTo } : {}),
           ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
@@ -527,6 +558,13 @@ const ChatPage = () => {
 
         return [...prev, newMsg];
       });
+
+      // Clear typing indicator for this sender
+      if (isGroup) {
+        setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== senderIdRaw));
+      } else if (senderIdRaw === chatUserIdRef.current) {
+        setIsTyping(false);
+      }
 
       // Handle read receipts and global list invalidation for other's messages
       const senderIdRaw = m.senderId?._id || m.senderId;
@@ -566,8 +604,38 @@ const ChatPage = () => {
     socket.on("messages read", onRead);
     socket.on("reaction updated", onReaction);
     socket.on("message deleted", onMsgDeleted);
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop typing", () => setIsTyping(false));
+    socket.on("typing", (data: any) => {
+      const uid = data.userId || data._id;
+      if (isGroup) {
+        setTypingUsers(prev => {
+          if (prev.find(u => (u._id || (u as any).userId) === uid)) return prev;
+          return [...prev, { ...data, _id: uid, userId: uid }];
+        });
+        setTimeout(() => {
+          setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
+        }, 8000);
+      } else {
+        setIsTyping(true);
+        setTimeout(() => setIsTyping(false), 8000);
+      }
+    });
+
+    socket.on("stop typing", (data: any) => {
+      const uid = data?.userId || data?._id;
+      if (isGroup) {
+        setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
+      } else {
+        setIsTyping(false);
+      }
+    });
+
+    socket.on("stop typing", (data: any) => {
+      if (isGroup) {
+        setTypingUsers(prev => prev.filter(u => u._id !== data.userId));
+      } else {
+        setIsTyping(false);
+      }
+    });
     socket.on("user-online", (uid: string) => { if (uid === chatUserIdRef.current) { setChatUserOnline(true); setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" ? { ...m, status: "delivered" } : m)); } });
     socket.on("user-offline", (uid: string) => { if (uid === chatUserIdRef.current) setChatUserOnline(false); });
     return () => {
@@ -690,12 +758,14 @@ const ChatPage = () => {
     return { left, top };
   };
 
+  const isGroupAdmin = isGroup && groupData?.admins?.some((a: any) => (a._id || a) === user?._id);
+
   const msgMenuActions = msgMenu ? [
     { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msgMenu.msg) },
     { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msgMenu.msg), hide: !msgMenu.msg.text },
     { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msgMenu.msg) },
     { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msgMenu.msg) },
-    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true },
+    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true, hide: !(msgMenu.msg.senderId === "me") && !isGroupAdmin },
   ].filter((a: any) => !a.hide) : [];
 
   // Compute the chat container background style
@@ -850,17 +920,21 @@ const ChatPage = () => {
               <button onClick={() => navigate(-1)} className="text-foreground hover:opacity-80 transition-opacity">
                 <ArrowLeft size={22} strokeWidth={1.5} />
               </button>
-              <button onClick={() => chatUser?._id && navigate(`/chat/${chatUser._id}/profile`)}
+              <button onClick={() => isGroup ? navigate(`/chat/group/${userId}/profile`) : navigate(`/chat/${userId}/profile`)}
                 className="flex-1 min-w-0 flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
                 <div className="relative shrink-0">
-                  <img src={chatUser?.avatar || "https://i.pravatar.cc/150"} className="w-10 h-10 rounded-full object-cover shadow-sm" alt="" />
-                  {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />}
+                  <img src={chatUser?.avatar || (isGroup ? 'https://i.pravatar.cc/150?u=group' : 'https://i.pravatar.cc/150')} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white/10" alt="" />
+                  {!isGroup && isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />}
                 </div>
                 <div className="flex flex-col flex-1 overflow-hidden leading-tight justify-center mt-0.5">
                   <span className="font-semibold text-foreground text-[15px] truncate">{chatUser?.name || "Loading..."}</span>
                   <span className="text-[11px] truncate opacity-80 transition-colors duration-300"
-                    style={{ color: isTyping ? "hsl(var(--primary))" : isOnline ? "hsl(142 70% 45%)" : "hsl(var(--muted-foreground))" }}>
-                    {statusLabel}
+                    style={{ color: (isTyping || typingUsers.length > 0) ? "hsl(var(--primary))" : (!isGroup && isOnline) ? "hsl(142 70% 45%)" : "hsl(var(--muted-foreground))" }}>
+                    {isGroup ? (
+                      typingUsers.length > 0 
+                        ? `${typingUsers[0].name} is typing...` 
+                        : `${groupData?.participants?.length || 0} members`
+                    ) : statusLabel}
                   </span>
                 </div>
               </button>
@@ -882,6 +956,7 @@ const ChatPage = () => {
                             { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: openSearch },
                             { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
                             { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
+                            { icon: <Info size={16} strokeWidth={1.5} />, label: isGroup ? "Group info" : "User info", fn: () => isGroup ? navigate(`/chat/group/${userId}/profile`) : navigate(`/chat/${userId}/profile`) },
                           ].map((item, i) => (
                             <button key={i} onClick={item.fn}
                               className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left border-b border-border/40">
@@ -901,11 +976,11 @@ const ChatPage = () => {
                             <ArrowLeft size={15} strokeWidth={2} /> Back
                           </button>
                           {[
-                            { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true },
+                            { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true, hide: isGroup },
                             { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
                             { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
                             { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
-                          ].map((item, i, arr) => (
+                          ].filter(i => !i.hide).map((item: any, i, arr) => (
                             <button key={i} onClick={item.fn}
                               className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
                                 ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
@@ -966,6 +1041,18 @@ const ChatPage = () => {
             const isLastInGroup = !messages[index + 1] || messages[index + 1].senderId !== msg.senderId;
             const isLastMyMsg = index === lastSeenIdx;
             const isCurrentHit = searchResults[searchIdx]?._id === msg.id;
+
+            // Only show participant avatar on the LATEST message they've read
+            const effectiveReadBy = isGroup ? (msg.readBy || []).filter(u => {
+              const uId = typeof u === 'string' ? u : u._id;
+              if (uId === user?._id) return false; // Don't show me in read stack
+              // Find if there's any later message seen by this user
+              const laterMsgWithUser = messages.slice(index + 1).find(m => 
+                m.readBy?.some(ru => (typeof ru === 'string' ? ru : ru._id) === uId)
+              );
+              return !laterMsgWithUser;
+            }) : msg.readBy;
+
             return (
               <div key={msg.id} id={`msg-${msg.id}`}
                 className={`transition-colors rounded-2xl ${isCurrentHit ? "ring-2 ring-primary/50 ring-offset-1" : ""}`}>
@@ -976,7 +1063,7 @@ const ChatPage = () => {
                   onTouchStart={e => startLongPress(msg, e)}
                   onTouchEnd={cancelLongPress} onTouchMove={e => moveLongPress(e)}>
                   <SwipeRow
-                    msg={msg} isMe={isMe} isLast={isLastInGroup} isLastMyMsg={isLastMyMsg}
+                    msg={{ ...msg, readBy: effectiveReadBy as any }} isMe={isMe} isLast={isLastInGroup} isLastMyMsg={isLastMyMsg}
                     onReply={setReplyingTo} chatUser={chatUser}
                     playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                     onImageTap={openLightbox} onReact={handleReact}
@@ -987,6 +1074,7 @@ const ChatPage = () => {
                     themeOtherBubbleText={isDefault ? undefined : themeDef.otherBubbleText}
                     themeMutedTextColor={isDefault ? undefined : themeDef.mutedText}
                     MediaRenderer={MediaRenderer}
+                    isGroup={isGroup}
                   />
                 </div>
               </div>
@@ -994,18 +1082,26 @@ const ChatPage = () => {
           })}
 
           <div className="overflow-hidden transition-all duration-300 ease-in-out"
-            style={{ maxHeight: isTyping ? 56 : 0, opacity: isTyping ? 1 : 0 }}>
-            <div className="flex justify-start mb-4 pt-1">
+            style={{ maxHeight: (isTyping || (isGroup && typingUsers.length > 0)) ? 64 : 0, opacity: (isTyping || (isGroup && typingUsers.length > 0)) ? 1 : 0, marginBottom: (isTyping || (isGroup && typingUsers.length > 0)) ? 16 : 0 }}>
+            <div className="flex justify-start pt-1">
               <div
-                className="border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5"
+                className="rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm border border-black/[0.05] dark:border-white/[0.08]"
                 style={{
-                  background: typingBubbleBg || "rgba(240,240,240,0.8)",
-                  backdropFilter: !isDefault ? "blur(8px)" : "blur(4px)",
+                  background: typingBubbleBg || "rgba(240,240,240,0.85)",
+                  backdropFilter: !isDefault ? "blur(12px)" : "blur(6px)",
                 }}
               >
-                {[0, 180, 360].map(d => (
-                  <div key={d} className="w-2 h-2 rounded-full bg-muted-foreground animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
-                ))}
+                {isGroup && typingUsers.length > 0 && (
+                  <img src={typingUsers[0].avatar || 'https://i.pravatar.cc/150'} className="w-5 h-5 rounded-full object-cover border border-white/20" alt="" />
+                )}
+                <div className="flex gap-1.5 items-center">
+                  {[0, 180, 360].map(d => (
+                    <div key={d} className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
+                  ))}
+                </div>
+                {isGroup && typingUsers.length > 0 && typingUsers[0].name && (
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter ml-0.5">{typingUsers[0].name.split(' ')[0]} is typing</span>
+                )}
               </div>
             </div>
           </div>
@@ -1070,6 +1166,12 @@ const ChatPage = () => {
                 {replyingTo && (
                   <div className="flex relative items-center gap-3 bg-black/5 dark:bg-white/5 p-3 pb-2 border-b border-black/5 dark:border-white/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
+                    <div className="flex-1 flex flex-col min-w-0" onClick={() => isGroup && setShowGroupInfo(true)} style={{ cursor: isGroup ? 'pointer' : 'default' }}>
+                      <h2 className="text-[17px] font-bold leading-tight truncate text-foreground pr-2">{chatUser?.name || "Chat"}</h2>
+                      <p className="text-[12px] font-medium text-muted-foreground/90 truncate mr-2">
+                        {isGroup ? `${groupData?.participants.length || 0} members` : statusLabel}
+                      </p>
+                    </div>
                     <div className="flex-1 min-w-0 pr-8">
                       <p className="text-[11px] font-bold tracking-wide uppercase text-primary/80 mb-0.5">
                         Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}

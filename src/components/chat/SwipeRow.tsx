@@ -31,6 +31,7 @@ export function SwipeRow({
   themeOtherBubbleText,
   themeMutedTextColor,  // CSS color string for timestamps
   MediaRenderer,
+  isGroup = false,
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
@@ -44,12 +45,14 @@ export function SwipeRow({
   themeOtherBubbleText?: string;
   themeMutedTextColor?: string;
   MediaRenderer?: any;
+  isGroup?: boolean;
 }) {
   const [offsetX, setOffsetX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
   const fired = useRef(false);
   const swipeActive = useRef(false);
+  const [showNames, setShowNames] = useState(false);
 
   const grouped = groupReactions(msg.reactions, myUserId);
 
@@ -119,7 +122,15 @@ export function SwipeRow({
           transition: dragging ? "none" : "transform 0.28s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       >
-        <div className="max-w-[78%]">
+        <div className="max-w-[82%]">
+          {/* Sender label for groups */}
+          {!isMe && isGroup && (
+            <div className="flex items-center gap-1.5 ml-1 mb-1 animate-in fade-in slide-in-from-left-2 duration-300">
+               <img src={msg.sender?.avatar || 'https://i.pravatar.cc/150'} className="w-5 h-5 rounded-full object-cover border border-border/20 shadow-sm" alt="" />
+               <span className="text-[10px] font-bold text-primary/80 tracking-tight uppercase">{msg.sender?.name}</span>
+            </div>
+          )}
+
           <div className="relative">
             <div style={{ paddingBottom: grouped.length > 0 ? "16px" : undefined }}>
               <BubbleContent
@@ -132,6 +143,7 @@ export function SwipeRow({
                 themeOtherBubbleBg={themeOtherBubbleBg}
                 themeOtherBubbleText={themeOtherBubbleText}
                 MediaRenderer={MediaRenderer}
+                isGroup={isGroup}
               />
             </div>
 
@@ -181,15 +193,48 @@ export function SwipeRow({
                     </span>
                   </p>
                 )}
-                {isMe && <StatusIcon status={msg.status} />}
+                {isMe && !isGroup && <StatusIcon status={msg.status} />}
               </>
             )}
           </div>
 
-          {/* Seen label */}
-          {isMe && isLastMyMsg && msg.status === "seen" && !msg.isUploading && (
-            <div className="flex justify-end mt-0.5">
-              <span className="text-[10px] text-blue-500 font-medium">Seen</span>
+          {/* Seen label or Avatar stack for groups */}
+          {isMe && !msg.isUploading && (
+            <div className="flex flex-col items-end mt-1 px-1">
+              {isGroup && msg.readBy && msg.readBy.length > 0 ? (
+                <>
+                  <div 
+                    className="flex items-center -space-x-1.5 overflow-hidden py-0.5 cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={() => setShowNames(!showNames)}
+                  >
+                    {msg.readBy.filter(u => u._id !== myUserId).slice(0, 5).map((u: any) => (
+                      <img 
+                        key={u._id} 
+                        src={u.avatar || 'https://i.pravatar.cc/150'} 
+                        className="w-3.5 h-3.5 rounded-full border border-background object-cover" 
+                        alt={u.name} 
+                      />
+                    ))}
+                    {msg.readBy.length > 5 && (
+                      <div className="w-3.5 h-3.5 rounded-full bg-secondary border border-background flex items-center justify-center text-[7px] font-bold text-muted-foreground shrink-0">
+                        +{msg.readBy.length - 5}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {showNames && (
+                    <div className="mt-1 flex flex-wrap justify-end gap-x-1.5 animate-in slide-in-from-top-1 fade-in duration-200">
+                      {msg.readBy.filter(u => u._id !== myUserId).map(u => (
+                        <span key={u._id} className="text-[9px] font-bold text-primary/60 uppercase tracking-tighter">
+                          {u.name.split(' ')[0]}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : !isGroup && msg.status === "seen" && isLastMyMsg ? (
+                <span className="text-[10px] text-blue-500 font-medium">Seen</span>
+              ) : null}
             </div>
           )}
         </div>

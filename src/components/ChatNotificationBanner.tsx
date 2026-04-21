@@ -34,8 +34,9 @@ export function ChatNotificationBanner() {
   const mutedChats            = useRef<Set<string>>(new Set());
 
   // Parse current chatUserId from URL path: /chat/:userId
-  const currentChatUserId = (() => {
-    const match = location.pathname.match(/\/chat\/([^/]+)/);
+  const currentChatId = (() => {
+    // Matches /chat/:id or /chat/group/:id
+    const match = location.pathname.match(/\/chat\/(?:group\/)?([^/]+)/);
     return match ? match[1] : null;
   })();
 
@@ -46,10 +47,17 @@ export function ChatNotificationBanner() {
       try {
         const { data } = await api.get("/chats");
         mutedChats.current = new Set(
-          (data as any[]).filter(c => c.isMuted).map(c => {
-            const other = c.participants.find((p: any) => (p._id || p) !== user._id);
-            return other?._id || other;
-          }).filter(Boolean)
+          (data as any[]).filter(c => c.isMuted).reduce((acc: string[], c) => {
+            // Store the chat ID itself (works for both DM and Group)
+            acc.push(c._id);
+            // Also store the other user ID specifically for DM lookup consistency
+            if (!c.isGroup) {
+              const other = c.participants.find((p: any) => (p._id || p) !== user._id);
+              const otherId = other?._id || other;
+              if (otherId) acc.push(otherId);
+            }
+            return acc;
+          }, [])
         );
       } catch { /* ignore */ }
     };
@@ -70,11 +78,11 @@ export function ChatNotificationBanner() {
       const chatUserId: string = (otherUser?._id || senderId)?.toString();
 
       // Suppress if already viewing this chat
-      if (currentChatUserId && currentChatUserId === chatUserId) return;
+      const chatId: string = (m.chatId?._id || m.chatId)?.toString();
+      if (currentChatId && (currentChatId === chatUserId || currentChatId === chatId)) return;
 
       // Suppress if muted
-      const chatId: string = (m.chatId?._id || m.chatId)?.toString();
-      if (mutedChats.current.has(chatUserId) || mutedChats.current.has(chatId)) return;
+      if (mutedChats.current.has(chatUserId) || (chatId && mutedChats.current.has(chatId))) return;
 
       const newBanner: Banner = {
         id:           `${chatUserId}-${Date.now()}`,
@@ -98,7 +106,7 @@ export function ChatNotificationBanner() {
 
     socket.on("message recieved", handleNewMessage);
     return () => { socket.off("message recieved", handleNewMessage); };
-  }, [socket, user, currentChatUserId]);
+  }, [socket, user, currentChatId]);
 
   const dismiss = (id: string) =>
     setBanners(prev => prev.filter(b => b.id !== id));

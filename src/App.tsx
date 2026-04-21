@@ -13,6 +13,8 @@ import ProfilePage from "./pages/ProfilePage";
 import ChatUserProfile from "./pages/ChatUserProfile";
 import ChatMediaPage from "./pages/ChatMediaPage";
 import ArchivedPage from "./pages/ArchivedPage";
+import NewGroupPage from "./pages/NewGroupPage";
+import GroupProfilePage from "./pages/GroupProfilePage";
 import BottomNav from "./components/BottomNav";
 import NotFound from "./pages/NotFound";
 import WelcomePage from "./pages/WelcomePage";
@@ -54,6 +56,10 @@ const App = () => (
               <Route path="/chat/:userId" element={<RequireAuth><ChatPage /></RequireAuth>} />
               <Route path="/chat/:userId/profile" element={<RequireAuth><ChatUserProfile /></RequireAuth>} />
               <Route path="/chat/:userId/media" element={<RequireAuth><ChatMediaPage /></RequireAuth>} />
+              <Route path="/chat/group/:userId" element={<RequireAuth><ChatPage /></RequireAuth>} />
+              <Route path="/chat/group/:userId/profile" element={<RequireAuth><GroupProfilePage /></RequireAuth>} />
+              <Route path="/chat/group/:userId/media" element={<RequireAuth><ChatMediaPage /></RequireAuth>} />
+              <Route path="/new-group" element={<RequireAuth><NewGroupPage /></RequireAuth>} />
               <Route path="/search" element={<RequireAuth><SearchPage /></RequireAuth>} />
               <Route path="/archived" element={<RequireAuth><ArchivedPage /></RequireAuth>} />
               <Route path="/activity" element={<RequireAuth><ActivityPage /></RequireAuth>} />

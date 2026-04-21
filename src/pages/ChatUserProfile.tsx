@@ -29,13 +29,31 @@ const ChatUserProfile = () => {
     const load = async () => {
       try {
         setIsLoading(true);
-        const { data: userData } = await api.get(`/users/${userId}`);
-        setChatUser(userData);
-        const { data: chatData } = await api.post("/chats", { userId });
-        setChat(chatData);
-        const uid = user?._id;
-        setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === uid));
-        setIsLocked(!!chatData.locks?.some((l: any) => (l.user?._id || l.user) === uid));
+        const isGroupId = window.location.pathname.includes('/chat/group/');
+        let chatData;
+        
+        if (isGroupId) {
+            const res = await api.get('/chats');
+            chatData = res.data.find((c: any) => c._id === userId);
+            setChatUser({ 
+              name: chatData?.chatName, 
+              avatar: chatData?.avatar, 
+              isGroup: true,
+              description: chatData?.description 
+            });
+        } else {
+            const { data: userData } = await api.get(`/users/${userId}`);
+            setChatUser(userData);
+            const res = await api.post("/chats", { userId });
+            chatData = res.data;
+        }
+
+        if (chatData) {
+          setChat(chatData);
+          const uid = user?._id;
+          setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === uid));
+          setIsLocked(!!chatData.locks?.some((l: any) => (l.user?._id || l.user) === uid));
+        }
       } catch (e) { console.error(e); }
       finally { setIsLoading(false); }
     };
@@ -83,7 +101,7 @@ const ChatUserProfile = () => {
   };
   const doClear = async () => {
     setConfirmType(null);
-    try { await api.delete(`/chats/${chat._id}/messages`); toast.success("Chat cleared"); navigate(`/chat/${userId}`); }
+    try { await api.delete(`/chats/${chat._id}/messages`); toast.success("Chat cleared"); navigate(window.location.pathname.replace('/profile', '')); }
     catch { toast.error("Failed to clear chat"); }
   };
 
@@ -135,20 +153,26 @@ const ChatUserProfile = () => {
           <>
             <div className="relative">
               <img
-                src={chatUser?.avatar || "https://i.pravatar.cc/150"}
-                className="w-[100px] h-[100px] rounded-full object-cover shadow-lg"
+                src={chatUser?.avatar || (chatUser?.isGroup ? "https://i.pravatar.cc/150?u=group" : "https://i.pravatar.cc/150")}
+                className={`w-[100px] h-[100px] object-cover shadow-lg ${chatUser?.isGroup ? 'rounded-[30px]' : 'rounded-full'}`}
                 alt={chatUser?.name}
               />
-              {chatUser?.online && (
+              {!chatUser?.isGroup && chatUser?.online && (
                 <div className="absolute bottom-1 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
               )}
             </div>
             <h2 className="text-xl font-bold text-foreground tracking-wide mt-4">{chatUser?.name || "User"}</h2>
-            {chatUser?.email && (
-              <p className="text-[13px] text-muted-foreground mt-1">@{chatUser.email.split("@")[0]}</p>
-            )}
-            {chatUser?.status && (
-              <p className="text-[13px] text-muted-foreground mt-1 px-8 text-center italic">"{chatUser.status}"</p>
+            {chatUser?.isGroup ? (
+              <p className="text-[13px] text-muted-foreground mt-1 px-8 text-center">{chatUser.description || "Group Chat"}</p>
+            ) : (
+              <>
+                {chatUser?.email && (
+                  <p className="text-[13px] text-muted-foreground mt-1">@{chatUser.email.split("@")[0]}</p>
+                )}
+                {chatUser?.status && (
+                  <p className="text-[13px] text-muted-foreground mt-1 px-8 text-center italic">"{chatUser.status}"</p>
+                )}
+              </>
             )}
           </>
         )}
@@ -157,7 +181,7 @@ const ChatUserProfile = () => {
       {/* Media shortcut card */}
       <div className="w-full px-5 mt-6 mb-4">
         <button
-          onClick={() => navigate(`/chat/${userId}/media`)}
+          onClick={() => navigate(window.location.pathname.replace('/profile', '/media'))}
           className="w-full bg-card rounded-[22px] px-5 py-4 shadow-sm border border-border/20 flex items-center justify-between hover:bg-secondary/30 transition-colors active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
@@ -180,7 +204,7 @@ const ChatUserProfile = () => {
 
           {/* Mute */}
           <button onClick={handleMuteToggle}
-            className="w-full flex items-center gap-4 py-3.5 hover:opacity-80 transition-opacity active:scale-[0.99] border-b border-border/40">
+            className={`w-full flex items-center gap-4 py-3.5 hover:opacity-80 transition-opacity active:scale-[0.99] border-b border-border/40`}>
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 shadow-sm border border-border/20">
               {isMuted
                 ? <BellOff size={18} strokeWidth={1.8} className="text-foreground" />
@@ -218,7 +242,7 @@ const ChatUserProfile = () => {
         <p className="text-[12px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-1">Privacy</p>
         <div className="flex flex-col rounded-[20px] bg-secondary/30 px-4 py-2 border border-border/40">
           {[
-            { icon: AlertTriangle, label: "Block contact", sub: "Stop receiving messages",    action: () => setConfirmType("block"), danger: true  },
+            ...(!chatUser?.isGroup ? [{ icon: AlertTriangle, label: "Block contact", sub: "Stop receiving messages",    action: () => setConfirmType("block"), danger: true  }] : []),
             { icon: Trash2,        label: "Clear chat",    sub: "Delete all messages for you", action: () => setConfirmType("clear"), danger: true  },
           ].map(({ icon: Icon, label, sub, action, danger }, i, arr) => (
             <button key={label} onClick={action}

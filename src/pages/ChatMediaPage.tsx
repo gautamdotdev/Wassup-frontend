@@ -73,11 +73,23 @@ const ChatMediaPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: chatData } = await api.post("/chats", { userId });
-        const other = chatData.participants.find((p: any) => p._id !== user?._id);
-        setChatUser(other);
-        const { data } = await api.get(`/chats/${chatData._id}/media`);
-        setMedia(data.filter((m: MediaItem) => m.mediaType !== "voice"));
+        const isGroupId = window.location.pathname.includes('/chat/group/');
+        let chatData;
+        if (isGroupId) {
+          const res = await api.get('/chats');
+          chatData = res.data.find((c: any) => c._id === userId);
+          setChatUser({ name: chatData?.chatName });
+        } else {
+          const res = await api.post("/chats", { userId });
+          chatData = res.data;
+          const other = chatData.participants.find((p: any) => p._id !== user?._id);
+          setChatUser(other);
+        }
+        
+        if (chatData) {
+          const { data } = await api.get(`/chats/${chatData._id}/media`);
+          setMedia(data.filter((m: MediaItem) => m.mediaType !== "voice"));
+        }
       } catch { toast.error("Failed to load media"); }
       finally { setLoading(false); }
     };

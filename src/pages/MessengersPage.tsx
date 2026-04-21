@@ -38,6 +38,7 @@ const MessengersPage = () => {
 
   /* filter modal */
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [newFilterName, setNewFilterName] = useState("");
   const [editingFilter, setEditingFilter] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -203,14 +204,14 @@ const MessengersPage = () => {
     }
     if (activeFilter === "Favorites") return !!chat.isFavorite;
     if (activeFilter === "Work") return !!chat.isWork;
-    if (activeFilter === "Groups") return !!chat.isGroup;
+    if (activeFilter === "Groups") return chat.chatType === "group";
     if (activeFilter === "Communities") return !!chat.isCommunity;
     return true;
   });
 
   /* top-bar menu actions */
   const handleNewContact = () => { setShowMoreMenu(false); navigate("/search"); };
-  const handleNewGroup = () => { setShowMoreMenu(false); toast.info("New group coming soon"); };
+  const handleNewGroup = () => { setShowMoreMenu(false); navigate("/new-group"); };
   const handleArchivedChats = () => { setShowMoreMenu(false); navigate("/archived"); };
   const handleSettings = () => { setShowMoreMenu(false); navigate("/settings"); };
   const handleClearAllRead = async () => {
@@ -521,16 +522,20 @@ const MessengersPage = () => {
             )}
 
             {!isLoading && filteredChats.map((chat: any) => {
-              const otherUser = chat.participants.find((p: any) => p._id !== user?._id);
-              if (!otherUser) return null;
+              const isGroup = chat.chatType === 'group';
+              const otherUser = isGroup ? null : chat.participants.find((p: any) => p._id !== user?._id);
+              if (!isGroup && !otherUser) return null;
+
+              const chatName = isGroup ? chat.chatName : otherUser.name;
+              const chatAvatar = isGroup ? (chat.avatar || 'https://i.pravatar.cc/150?u=group') : otherUser.avatar;
 
               const latestMsg = chat.latestMessage;
               const latestSenderId = latestMsg?.senderId?._id || latestMsg?.senderId;
               const isMine = latestSenderId === user?._id;
               const unreadCount: number = chat.unreadCount ?? 0;
               const isUnread = unreadCount > 0;
-              const tickSeen = isMine && latestMsg?.readBy?.length > 1;
-              const tickDelivered = isMine && !tickSeen && latestMsg?.readBy?.length >= 1;
+              const tickSeen = isMine && (isGroup ? (latestMsg?.readBy?.length > 1) : (latestMsg?.readBy?.length > 1));
+              const tickDelivered = isMine && !tickSeen && (latestMsg?.readBy?.length >= 1);
               let timeLabel = "";
               if (latestMsg?.createdAt) {
                 timeLabel = formatDistanceToNow(new Date(latestMsg.createdAt), { addSuffix: true }).replace("about ", "");
@@ -546,7 +551,7 @@ const MessengersPage = () => {
                   onMouseMove={e => moveLongPress(e)}
                   onTouchStart={e => startLongPress(chat._id, e)}
                   onTouchEnd={cancelLongPress} onTouchMove={e => moveLongPress(e)}
-                  onClick={() => { if (selecting) { toggleSelect(chat._id); return; } navigate(`/chat/${otherUser._id}`); }}
+                  onClick={() => { if (selecting) { toggleSelect(chat._id); return; } navigate(isGroup ? `/chat/group/${chat._id}` : `/chat/${otherUser._id}`); }}
                 >
                   {/* select circle */}
                   {selecting && (
@@ -557,15 +562,15 @@ const MessengersPage = () => {
                   )}
 
                   <div className={`relative shrink-0 transition-transform duration-150 ${selecting ? "scale-90" : ""}`}>
-                    <img src={otherUser.avatar || "https://i.pravatar.cc/150"} className="w-[58px] h-[58px] rounded-full object-cover" alt={otherUser.name} />
-                    {otherUser.online && !selecting && (
+                    <img src={chatAvatar || "https://i.pravatar.cc/150"} className={`w-[58px] h-[58px] object-cover ${isGroup ? 'rounded-[20px]' : 'rounded-full'}`} alt={chatName} />
+                    {!isGroup && otherUser.online && !selecting && (
                       <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0 text-left self-center mt-1 pb-1">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="font-semibold text-[16px] leading-tight truncate pr-2 text-foreground">{otherUser.name}</p>
+                      <p className="font-semibold text-[16px] leading-tight truncate pr-2 text-foreground">{chatName}</p>
                       <span className={`text-[12px] shrink-0 ${isUnread ? "text-green-500 font-semibold" : "text-muted-foreground"}`}>{timeLabel}</span>
                     </div>
                     <div className="flex items-center gap-1.5 justify-between">
@@ -576,7 +581,12 @@ const MessengersPage = () => {
                             ? <BsCheckAll size={18} className="text-muted-foreground shrink-0" />
                             : <BsCheck size={18} className="text-muted-foreground shrink-0" />)}
                         <p className={`text-[14px] truncate ${isUnread ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-                          {latestMsg ? latestMsg.text || "📷 Photo" : "Say hi!"}
+                          {latestMsg ? (
+                            <>
+                              {isGroup && latestMsg.senderId?._id !== user?._id && <span className="text-primary/70 font-bold mr-1">{latestMsg.senderId?.name}:</span>}
+                              {latestMsg.text || "📷 Photo"}
+                            </>
+                          ) : "Say hi!"}
                         </p>
                       </div>
                       {isUnread && !selecting && (

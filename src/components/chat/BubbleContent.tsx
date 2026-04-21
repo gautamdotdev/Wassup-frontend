@@ -13,6 +13,8 @@ export function BubbleContent({
   msg, isMe, isLast, chatUser, playingVoice, setPlayingVoice, onImageTap,
   themeBubbleBg, themeBubbleText,
   themeOtherBubbleBg, themeOtherBubbleText,
+  MediaRenderer,
+  isGroup = false,
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; chatUser?: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
@@ -21,6 +23,8 @@ export function BubbleContent({
   themeBubbleText?: string;
   themeOtherBubbleBg?: string;
   themeOtherBubbleText?: string;
+  MediaRenderer?: any;
+  isGroup?: boolean;
 }) {
   // Neutral fallback styles
   const neutralBgClass = "bg-[#f0f0f0] dark:bg-[#2a2a2a] border border-black/[0.1] dark:border-white/[0.08]";
@@ -39,8 +43,13 @@ export function BubbleContent({
     ? (isMe ? "rounded-[22px] rounded-br-[5px]" : "rounded-[22px] rounded-bl-[5px]")
     : "rounded-[22px]";
 
-  const replyLabel = (senderId: string) =>
-    senderId === "me" ? "You" : (chatUser?.name?.split(" ")[0] || "Them");
+  const replyLabel = (senderId: string) => {
+    if (senderId === "me") return "You";
+    if (isGroup && msg.replyTo && (msg.replyTo as any).senderId !== "me") {
+        return msg.sender?.name || (chatUser?.name?.split(" ")[0] || "Them");
+    }
+    return (chatUser?.name?.split(" ")[0] || "Them");
+  };
 
   /* ── voice ── */
   if (msg.voiceNote) {
