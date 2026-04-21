@@ -19,12 +19,11 @@ import { useSocket } from "../lib/socket";
 
 import { Lightbox } from "@/components/chat/Lightbox";
 import { SwipeRow } from "@/components/chat/SwipeRow";
-import { PendingStrip } from "@/components/chat/PendingStrip";
 import { AttachmentPanel } from "@/components/chat/AttachmentPanel";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { useQuickReactions } from "@/hooks/useQuickReactions";
 import { ConfirmModal } from "@/components/chat/ConfirmModal";
-import { ThemePicker, ChatTheme } from "@/components/chat/ThemePicker";
+import { ThemePicker, ChatTheme, THEMES } from "@/components/chat/ThemePicker";
 import { LockScreen } from "@/components/chat/LockScreen";
 import { MediaRenderer } from "@/components/chat/MediaRenderer";
 
@@ -33,95 +32,127 @@ type ConfirmType = "block" | "clear" | null;
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 interface SearchHit { _id: string; text: string; createdAt: string }
 
-const THEME_BUBBLES: Record<ChatTheme, {
-  mine: string;
-  mineText: string;
-  other: string;
-  otherText: string;
-  chatBg?: string;
-  hex?: string;
-  mutedText: string;
-}> = {
-  default: {
-    mine: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
-    mineText: "text-foreground",
-    other: "bg-[#f0f0f0] dark:bg-[#2a2a2a]",
-    otherText: "text-foreground",
-    chatBg: "",
-    hex: "",
-    mutedText: "text-muted-foreground/55",
-  },
-  ocean: {
-    mine: "bg-[#0066cc]",
-    mineText: "text-white",
-    other: "bg-[#0a2a4a]",
-    otherText: "text-blue-200",
-    chatBg: "bg-[#0a1628]",
-    hex: "#0a1628",
-    mutedText: "text-blue-300/60",
-  },
-  forest: {
-    mine: "bg-[#2d7a2d]",
-    mineText: "text-white",
-    other: "bg-[#1a3a1a]",
-    otherText: "text-green-200",
-    chatBg: "bg-[#0d1f0d]",
-    hex: "#0d1f0d",
-    mutedText: "text-green-300/60",
-  },
-  sunset: {
-    mine: "bg-[#e85d04]",
-    mineText: "text-white",
-    other: "bg-[#2a1200]",
-    otherText: "text-orange-200",
-    chatBg: "bg-[#1a0a00]",
-    hex: "#1a0a00",
-    mutedText: "text-orange-300/60",
-  },
-  lavender: {
-    mine: "bg-[#8b5cf6]",
-    mineText: "text-white",
-    other: "bg-[#220033]",
-    otherText: "text-purple-200",
-    chatBg: "bg-[#13001f]",
-    hex: "#13001f",
-    mutedText: "text-purple-300/60",
-  },
-  midnight: {
-    mine: "bg-[#1d4ed8]",
-    mineText: "text-white",
-    other: "bg-[#060f2e]",
-    otherText: "text-blue-200",
-    chatBg: "bg-[#020c1b]",
-    hex: "#020c1b",
-    mutedText: "text-blue-300/60",
-  },
-  rose: {
-    mine: "bg-[#e11d48]",
-    mineText: "text-white",
-    other: "bg-[#280010]",
-    otherText: "text-pink-200",
-    chatBg: "bg-[#1f0010]",
-    hex: "#1f0010",
-    mutedText: "text-pink-300/60",
-  },
-  love: {
-    mine: "bg-[#ff4d8f]",
-    mineText: "text-white",
-    other: "bg-[#2e0020]",
-    otherText: "text-pink-100",
-    chatBg: "bg-[#1a0010]",
-    hex: "#1a0010",
-    mutedText: "text-pink-200/60",
-  },
-};
+// ── Animated background (same components as ThemePicker, re-exported here) ──
 
-/* ── Pending image preview with HEIC conversion ── */
+function LoveParticles() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <style>{`
+        @keyframes floatHeartChat {
+          0%   { transform: translateY(0) scale(1) rotate(var(--r)); opacity: 0; }
+          10%  { opacity: var(--op); }
+          90%  { opacity: var(--op); }
+          100% { transform: translateY(-110vh) scale(var(--s)) rotate(calc(var(--r)+30deg)); opacity: 0; }
+        }
+        .love-heart-chat {
+          position:absolute; bottom:-60px;
+          animation: floatHeartChat var(--dur) var(--delay) infinite ease-in-out;
+          font-size: var(--fsize); user-select: none; max-width:430px;
+        }
+      `}</style>
+      {Array.from({ length: 14 }).map((_, i) => {
+        const emojis = ["❤️", "💕", "💗", "💓", "🩷", "💖", "💝", "💘"];
+        return (
+          <span key={i} className="love-heart-chat" style={{
+            left: `${5 + (i * 6.5) % 88}%`,
+            "--dur": `${7 + (i * 1.5) % 8}s`,
+            "--delay": `${-(i * 0.9) % 8}s`,
+            "--fsize": `${14 + (i * 8) % 22}px`,
+            "--r": `${-15 + (i * 12) % 30}deg`,
+            "--s": `${0.8 + (i * 0.1) % 0.5}`,
+            "--op": `${0.25 + (i * 0.05) % 0.35}`,
+          } as any}>{emojis[i % emojis.length]}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+function GalaxyStars() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <style>{`
+        @keyframes twinkleChat { 0%,100%{opacity:.1;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
+        .gc-star { position:absolute; border-radius:50%; background:white; animation:twinkleChat var(--d) var(--del) infinite; }
+      `}</style>
+      {Array.from({ length: 55 }).map((_, i) => (
+        <div key={i} className="gc-star" style={{
+          left: `${(i * 17.3) % 100}%`, top: `${(i * 13.7) % 100}%`,
+          width: `${1 + (i % 3)}px`, height: `${1 + (i % 3)}px`,
+          "--d": `${1.5 + (i * 0.4) % 3}s`, "--del": `${-(i * 0.25) % 3}s`,
+        } as any} />
+      ))}
+    </div>
+  );
+}
+
+function AuroraWaves() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <style>{`
+        @keyframes aw1c { 0%,100%{transform:translateX(-20%) scaleY(1);opacity:.2} 50%{transform:translateX(20%) scaleY(1.3);opacity:.35} }
+        @keyframes aw2c { 0%,100%{transform:translateX(15%) scaleY(.9);opacity:.15} 50%{transform:translateX(-15%) scaleY(1.2);opacity:.3} }
+        .aurora-band-c { position:absolute; width:200%; left:-50%; border-radius:9999px; filter:blur(40px); }
+      `}</style>
+      <div className="aurora-band-c" style={{ height: "35%", top: "10%", background: "linear-gradient(90deg,#00ffcc,#00bfff,#7fffaa)", animation: "aw1c 6s ease-in-out infinite" }} />
+      <div className="aurora-band-c" style={{ height: "30%", top: "30%", background: "linear-gradient(90deg,#00e5ff,#00ff88,#00ccff)", animation: "aw2c 8s ease-in-out infinite" }} />
+      <div className="aurora-band-c" style={{ height: "25%", top: "50%", background: "linear-gradient(90deg,#00ffaa,#00e5ff)", animation: "aw1c 10s ease-in-out infinite reverse" }} />
+    </div>
+  );
+}
+
+function FlirtBlobs() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <style>{`
+        @keyframes fbChat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-18px) scale(1.06)} }
+        .fb-blob { position:absolute; border-radius:50%; filter:blur(50px); }
+      `}</style>
+      {[
+        { w: 160, h: 160, top: "8%", left: "-5%", bg: "rgba(244,114,182,0.2)", dur: "7s", del: "0s" },
+        { w: 120, h: 120, top: "55%", left: "8%", bg: "rgba(192,38,211,0.15)", dur: "9s", del: "-3s" },
+        { w: 200, h: 200, top: "28%", right: "-8%", bg: "rgba(244,114,182,0.15)", dur: "11s", del: "-5s" },
+      ].map((b, i) => (
+        <div key={i} className="fb-blob" style={{
+          width: b.w, height: b.h, top: b.top,
+          left: b.left ?? undefined, right: (b as any).right ?? undefined,
+          background: b.bg, animation: `fbChat ${b.dur} ${b.del} infinite ease-in-out`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function BasketballBg() {
+  return (
+    <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.06 }}>
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50%" cy="45%" r="100" fill="none" stroke="#fff" strokeWidth="1.5" />
+        <circle cx="50%" cy="45%" r="24" fill="none" stroke="#fff" strokeWidth="1.5" />
+        <line x1="0" y1="45%" x2="100%" y2="45%" stroke="#fff" strokeWidth="1" strokeDasharray="6 6" />
+      </svg>
+    </div>
+  );
+}
+
+function ChatAnimatedBg({ themeId }: { themeId: ChatTheme }) {
+  if (themeId === "love") return <LoveParticles />;
+  if (themeId === "galaxy") return <GalaxyStars />;
+  if (themeId === "aurora") return <AuroraWaves />;
+  if (themeId === "basketball") return <BasketballBg />;
+  if (themeId === "flirt") return <FlirtBlobs />;
+  return null;
+}
+
+// ── Pending preview ──────────────────────────────────────────────────────────
+
 const PendingPreviewImg = ({ url }: { url: string }) => {
   const { url: converted, loading } = useMediaUrl(url);
   if (loading) return <div className="w-16 h-16 bg-secondary rounded-xl animate-pulse" />;
   return <img src={converted} className="w-16 h-16 object-cover rounded-xl" alt="" />;
 };
+
+// ── ChatPage ─────────────────────────────────────────────────────────────────
 
 const ChatPage = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -143,12 +174,14 @@ const ChatPage = () => {
   const prevMsgCountRef = useRef(0);
   const lpStartX = useRef(0);
   const lpStartY = useRef(0);
+  const quickCameraRef = useRef<HTMLInputElement>(null);
 
-  /* core state */
+  /* auth / socket */
   const { user } = useAuth();
   const { socket } = useSocket();
   const queryClient = useQueryClient();
 
+  /* state */
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chatUser, setChatUser] = useState<any>(null);
@@ -161,7 +194,6 @@ const ChatPage = () => {
   const [pendingImages, setPendingImages] = useState<{ url: string; file?: File }[]>([]);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
-
   const [showMenu, setShowMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -183,26 +215,26 @@ const ChatPage = () => {
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
 
-  const quickCameraRef = useRef<HTMLInputElement>(null);
+  // ── Resolve theme colors ──
+  const themeDef = THEMES.find(t => t.id === chatTheme) || THEMES[0];
+  const isDefault = chatTheme === "default";
 
-  const themeColors = THEME_BUBBLES[chatTheme];
-  const isEffectiveDark = isDark || chatTheme !== "default";
+  const isEffectiveDark = isDark || !isDefault;
 
+  // Glassmorphism pill for input bar
   const pill = isEffectiveDark
     ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
     : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
   const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
 
-  // Theme-aware input pill — tints with theme color on non-default themes
-  const inputPillStyle = chatTheme === "default"
-    ? blurStyle
-    : {
-      background: `${themeColors.hex}CC`,
-      border: "1px solid rgba(255,255,255,0.12)",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-      backdropFilter: "blur(20px) saturate(160%)",
-      WebkitBackdropFilter: "blur(20px) saturate(160%)",
-    };
+  // Theme-tinted input pill (more opaque for legibility)
+  const inputPillStyle = isDefault ? blurStyle : {
+    background: `${themeDef.hex}F2`,
+    border: "1px solid rgba(255,255,255,0.15)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+    backdropFilter: "blur(25px) saturate(160%)",
+    WebkitBackdropFilter: "blur(25px) saturate(160%)",
+  };
 
   const sheetBg = {
     background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
@@ -219,14 +251,12 @@ const ChatPage = () => {
 
   const closeMsgMenu = useCallback(() => { setMsgMenu(null); setEmojiPickerMode(null); }, []);
 
-  /* ── prevent right-click ── */
   useEffect(() => {
     const block = (e: MouseEvent) => e.preventDefault();
     document.addEventListener("contextmenu", block);
     return () => document.removeEventListener("contextmenu", block);
   }, []);
 
-  /* ── scroll tracking ── */
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -251,12 +281,9 @@ const ChatPage = () => {
     setTimeout(() => el.classList.remove("msg-highlight"), 1500);
   }, []);
 
-  /* ── close menus ── */
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false); setShowMoreMenu(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) { setShowMenu(false); setShowMoreMenu(false); }
       if (emojiPickerMode !== null) return;
       if (msgMenuRef.current && !msgMenuRef.current.contains(e.target as Node)) closeMsgMenu();
     };
@@ -264,7 +291,6 @@ const ChatPage = () => {
     return () => document.removeEventListener("mousedown", fn);
   }, [emojiPickerMode, closeMsgMenu]);
 
-  /* ── long press ── */
   const startLongPress = useCallback((msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
@@ -285,7 +311,6 @@ const ChatPage = () => {
     if (Math.abs(x - lpStartX.current) > 10 || Math.abs(y - lpStartY.current) > 10) cancelLongPress();
   }, [cancelLongPress]);
 
-  /* ── camera pick — accept HEIC/MOV too ── */
   const handleQuickCameraPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -297,7 +322,6 @@ const ChatPage = () => {
     e.target.value = "";
   };
 
-  /* ── search ── */
   const openSearch = () => { setSearchOpen(true); setShowMenu(false); setTimeout(() => searchInputRef.current?.focus(), 80); };
   const closeSearch = () => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); setSearchIdx(-1); };
 
@@ -330,7 +354,6 @@ const ChatPage = () => {
     setSearchIdx(next); scrollToMessage(searchResults[next]._id);
   };
 
-  /* ── menu handlers ── */
   const handleMuteToggle = async () => {
     try {
       await api.post(`/chats/${currentChat._id}/mute`, { mute: !isMuted });
@@ -345,7 +368,6 @@ const ChatPage = () => {
   const applyTheme = async (theme: ChatTheme) => {
     setShowThemePicker(false);
     setChatTheme(theme);
-    // Cache locally for instant load next open
     if (userId) localStorage.setItem(`chat-theme-${userId}`, theme);
     try { await api.post(`/chats/${currentChat._id}/theme`, { theme }); }
     catch { toast.error("Failed to save theme"); }
@@ -372,8 +394,7 @@ const ChatPage = () => {
     catch { toast.error("Failed to block user"); }
   };
   const doClear = async () => {
-    setConfirmType(null);
-    setMessages([]);
+    setConfirmType(null); setMessages([]);
     try {
       await api.delete(`/chats/${currentChat._id}/messages`);
       toast.success("Chat cleared");
@@ -392,7 +413,6 @@ const ChatPage = () => {
     } catch { return false; }
   };
 
-  /* ── msg context menu actions ── */
   const handleMsgReply = (msg: Msg) => { setReplyingTo(msg); closeMsgMenu(); };
   const handleMsgCopy = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
   const handleMsgForward = (_msg: Msg) => { toast.info("Forward coming soon"); closeMsgMenu(); };
@@ -407,7 +427,6 @@ const ChatPage = () => {
     } catch { toast.error("Failed to delete"); }
   };
 
-  /* ── socket room ── */
   useEffect(() => {
     if (!socket || !currentChat?._id) return;
     const join = () => socket.emit("join chat", currentChat._id);
@@ -415,11 +434,9 @@ const ChatPage = () => {
     return () => { socket.off("connect", join); };
   }, [socket, currentChat?._id]);
 
-  /* ── load chat ── */
   useEffect(() => {
     let active = true;
     const load = async () => {
-      // Apply cached theme immediately to prevent flash
       if (userId) {
         const cached = localStorage.getItem(`chat-theme-${userId}`) as ChatTheme | null;
         if (cached) setChatTheme(cached);
@@ -433,11 +450,9 @@ const ChatPage = () => {
         chatUserIdRef.current = other?._id ?? null;
         setChatUserOnline(!!other?.online);
         setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === user?._id));
-
         const serverTheme = (chatData.theme || "default") as ChatTheme;
         setChatTheme(serverTheme);
         if (userId) localStorage.setItem(`chat-theme-${userId}`, serverTheme);
-
         const locked = !!chatData.locks?.some((l: any) => (l.user?._id || l.user) === user?._id);
         setIsLocked(locked);
         if (locked) setShowLockScreen("verify");
@@ -475,35 +490,56 @@ const ChatPage = () => {
     return () => { active = false; };
   }, [userId, user]);
 
-  /* ── socket events ── */
   useEffect(() => {
     if (!socket) return;
     const onNewMsg = (m: any) => {
       const cid = m.chatId?._id || m.chatId;
       if (!currentChat || cid !== currentChat._id) return;
+      
       setMessages(prev => {
+        // Prevent duplicates
         if (prev.find(x => x.id === m._id)) return prev;
-        const isMe = (m.senderId?._id || m.senderId) === user?._id;
+
+        const myId = user?._id;
+        const senderIdRaw = m.senderId?._id || m.senderId;
+        const isMe = senderIdRaw === myId;
+        
         let replyTo: Msg["replyTo"] | undefined;
         if (m.replyTo) {
-          const rtId = m.replyTo.senderId?._id || m.replyTo.senderId;
-          replyTo = { id: m.replyTo._id || m.replyTo, senderId: rtId === user?._id ? "me" : "other", text: m.replyTo.text || "Voice message" };
+          const rtIdRaw = m.replyTo.senderId?._id || m.replyTo.senderId;
+          replyTo = { 
+            id: m.replyTo._id || m.replyTo, 
+            senderId: (rtIdRaw === myId) ? "me" : "other", 
+            text: m.replyTo.text || (m.replyTo.mediaUrl ? "Media message" : "Voice message") 
+          };
         }
-        return [...prev, {
-          id: m._id, senderId: isMe ? "me" : "other", text: m.text,
+
+        const newMsg: Msg = {
+          id: m._id,
+          senderId: isMe ? "me" : "other",
+          text: m.text,
           timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-          status: isMe ? "sent" : undefined, reactions: m.reactions || [],
+          status: isMe ? (m.tickStatus || "sent") : undefined,
+          reactions: m.reactions || [],
           ...(replyTo ? { replyTo } : {}),
           ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
-        }];
+        };
+
+        return [...prev, newMsg];
       });
-      if ((m.senderId?._id || m.senderId) !== user?._id) {
+
+      // Handle read receipts and global list invalidation for other's messages
+      const senderIdRaw = m.senderId?._id || m.senderId;
+      if (senderIdRaw !== user?._id) {
         if (!isAtBottomRef.current) setUnreadWhileAway(c => c + 1);
         if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
         readDebounceRef.current = setTimeout(() => {
           api.post(`/messages/read/${cid}`).catch(() => { });
           queryClient.invalidateQueries({ queryKey: ["chats"] });
         }, 1500);
+      } else {
+        // Even for my messages, invalidate chats to update latest message in sidebar
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
       }
     };
     const onDelivered = ({ messageId, chatId }: any) => {
@@ -520,12 +556,11 @@ const ChatPage = () => {
       setMessages(p => p.map(m => m.senderId === "me" ? { ...m, status: "seen" } : m));
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
-    const onReaction = ({ messageId, reactions }: any) =>
-      setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
-    const onMsgDeleted = ({ messageId }: any) =>
-      setMessages(p => p.filter(m => m.id !== messageId));
+    const onReaction = ({ messageId, reactions }: any) => setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
+    const onMsgDeleted = ({ messageId }: any) => setMessages(p => p.filter(m => m.id !== messageId));
 
     socket.on("message recieved", onNewMsg);
+    socket.on("message received", onNewMsg); // Catch both spellings
     socket.on("message delivered", onDelivered);
     socket.on("messages delivered", onManyDelivered);
     socket.on("messages read", onRead);
@@ -543,7 +578,6 @@ const ChatPage = () => {
     };
   }, [socket, currentChat, user, queryClient]);
 
-  /* ── auto-scroll on new messages only ── */
   useEffect(() => {
     const isNew = messages.length > prevMsgCountRef.current;
     prevMsgCountRef.current = messages.length;
@@ -664,6 +698,26 @@ const ChatPage = () => {
     { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true },
   ].filter((a: any) => !a.hide) : [];
 
+  // Compute the chat container background style
+  const chatContainerStyle: React.CSSProperties = isDefault
+    ? {}
+    : { background: themeDef.chatBg };
+
+  // Header bg style for themed mode (Solid for better premium feel)
+  const headerBgStyle: React.CSSProperties = isDefault
+    ? {}
+    : { backgroundColor: `${themeDef.hex}`, borderBottom: "1px solid rgba(255,255,255,0.1)" };
+
+  // Bottom gradient style
+  const bottomGradientStyle: React.CSSProperties = isDefault
+    ? {}
+    : { background: `linear-gradient(to top, ${themeDef.hex} 0%, ${themeDef.hex}F2 70%, transparent 100%)` };
+
+  // Typing indicator bg
+  const typingBubbleBg = isDefault
+    ? undefined
+    : themeDef.otherBubble;
+
   return (
     <>
       <style>{`
@@ -676,7 +730,6 @@ const ChatPage = () => {
         @keyframes slideUp   { from{opacity:0;transform:translateY(60px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      {/* accept HEIC + MOV in addition to standard types */}
       <input ref={quickCameraRef} type="file" multiple
         accept="image/*,video/*,.heic,.heif,.mov"
         capture="environment" className="hidden" onChange={handleQuickCameraPick} />
@@ -690,7 +743,14 @@ const ChatPage = () => {
         message="All messages deleted for you. Cannot be undone." confirmLabel="Clear Chat" danger
         onConfirm={doClear} onCancel={() => setConfirmType(null)} />
 
-      {showThemePicker && <ThemePicker currentTheme={chatTheme} onSelect={applyTheme} onClose={() => setShowThemePicker(false)} />}
+      {showThemePicker && (
+        <ThemePicker
+          currentTheme={chatTheme}
+          chatUser={{ name: chatUser?.name, avatar: chatUser?.avatar }}
+          onSelect={applyTheme}
+          onClose={() => setShowThemePicker(false)}
+        />
+      )}
 
       {/* Message info sheet */}
       {msgInfoOpen && (
@@ -698,8 +758,7 @@ const ChatPage = () => {
           style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
           onClick={() => setMsgInfoOpen(null)}>
           <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
-            style={sheetBg}
-            onClick={e => e.stopPropagation()}>
+            style={sheetBg} onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-muted-foreground/30" /></div>
             <div className="px-6 pt-3 pb-2 flex items-center justify-between border-b border-border/30">
               <h3 className="text-[17px] font-bold text-foreground">Message Info</h3>
@@ -736,7 +795,6 @@ const ChatPage = () => {
           <div ref={msgMenuRef} className="fixed rounded-2xl overflow-hidden"
             style={{ ...dropdownBg, ...getMsgMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
-            {/* Quick emoji row */}
             <div className="flex items-center justify-around px-2 py-2.5 border-b border-border/30">
               {quickReactions.map((e, idx) => (
                 <button key={idx}
@@ -774,13 +832,18 @@ const ChatPage = () => {
           onClose={closeMsgMenu} />
       )}
 
-      {/* Main chat container — smooth color transition on theme change */}
-      <div className={`${chatTheme !== "default" ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 ${themeColors.chatBg || "bg-background"}`}>
+      {/* ── Main chat layout ── */}
+      <div
+        className={`${!isDefault ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 ${isDefault ? "bg-background" : ""}`}
+        style={chatContainerStyle}
+      >
+        {/* Animated background layer (fixed, behind content) */}
+        {!isDefault && <ChatAnimatedBg key={chatTheme} themeId={chatTheme} />}
 
         {/* Header */}
         <div
-          className={`sticky top-0 z-10 backdrop-blur-md transition-colors duration-300 ${chatTheme === "default" ? "bg-background/80" : ""}`}
-          style={{ backgroundColor: chatTheme !== "default" ? `${themeColors.hex}E6` : undefined }}
+          className={`sticky top-0 z-[60] backdrop-blur-md transition-colors duration-300 ${isDefault ? "bg-background/80" : ""}`}
+          style={!isDefault ? headerBgStyle : undefined}
         >
           {!searchOpen ? (
             <div className="flex items-center gap-3 px-4 py-3 pb-4">
@@ -886,7 +949,7 @@ const ChatPage = () => {
         </div>
 
         {uploadStatus !== "idle" && (
-          <div className="text-center text-[12px] font-medium py-1 pointer-events-none">
+          <div className="relative z-10 text-center text-[12px] font-medium py-1 pointer-events-none">
             <span className={`px-4 py-1 rounded-full mx-auto inline-block
               ${uploadStatus === "uploading" ? "text-primary animate-pulse bg-primary/10"
                 : uploadStatus === "done" ? "text-green-500 bg-green-500/10"
@@ -897,7 +960,7 @@ const ChatPage = () => {
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
           {messages.map((msg, index) => {
             const isMe = msg.senderId === "me";
             const isLastInGroup = !messages[index + 1] || messages[index + 1].senderId !== msg.senderId;
@@ -918,11 +981,11 @@ const ChatPage = () => {
                     playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                     onImageTap={openLightbox} onReact={handleReact}
                     myUserId={user?._id ?? ""}
-                    themeBubbleBg={themeColors.mine}
-                    themeBubbleText={themeColors.mineText}
-                    themeOtherBubbleBg={themeColors.other}
-                    themeOtherBubbleText={themeColors.otherText}
-                    themeMutedText={themeColors.mutedText}
+                    themeBubbleBg={isDefault ? undefined : themeDef.myBubble}
+                    themeBubbleText={isDefault ? undefined : themeDef.myBubbleText}
+                    themeOtherBubbleBg={isDefault ? undefined : themeDef.otherBubble}
+                    themeOtherBubbleText={isDefault ? undefined : themeDef.otherBubbleText}
+                    themeMutedTextColor={isDefault ? undefined : themeDef.mutedText}
                     MediaRenderer={MediaRenderer}
                   />
                 </div>
@@ -930,15 +993,15 @@ const ChatPage = () => {
             );
           })}
 
-          {/* Typing indicator — uses other-bubble color */}
           <div className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{ maxHeight: isTyping ? 56 : 0, opacity: isTyping ? 1 : 0 }}>
             <div className="flex justify-start mb-4 pt-1">
               <div
-                className={`border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5 ${chatTheme === "default"
-                    ? "bg-[#f0f0f0] dark:bg-[#2a2a2a]"
-                    : themeColors.other
-                  }`}
+                className="border border-black/[0.06] dark:border-white/[0.08] rounded-2xl px-4 py-3 flex items-center gap-1.5"
+                style={{
+                  background: typingBubbleBg || "rgba(240,240,240,0.8)",
+                  backdropFilter: !isDefault ? "blur(8px)" : "blur(4px)",
+                }}
               >
                 {[0, 180, 360].map(d => (
                   <div key={d} className="w-2 h-2 rounded-full bg-muted-foreground animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -967,10 +1030,10 @@ const ChatPage = () => {
 
         {/* Bottom bar */}
         <div
-          className={`sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${chatTheme === "default" ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
-          style={{ background: chatTheme !== "default" ? `linear-gradient(to top, ${themeColors.hex} 0%, ${themeColors.hex}F2 70%, transparent 100%)` : undefined }}
+          className={`relative z-[50] sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          style={!isDefault ? bottomGradientStyle : undefined}
         >
-          {/* Pending strip */}
+          {/* Pending images strip */}
           {pendingImages.length > 0 && (
             <div className="flex gap-2 pb-3 overflow-x-auto">
               {pendingImages.map((p, i) => (
@@ -995,34 +1058,37 @@ const ChatPage = () => {
             </div>
           ) : (
             <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
-              {/* + button uses same themed pill */}
               <button onClick={() => setShowAttachPanel(true)}
                 className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
                 style={inputPillStyle}>
                 <FiPlus size={24} />
               </button>
               <div
-                className={`flex-1 flex flex-col overflow-hidden ${replyingTo ? "rounded-[20px]" : "rounded-full"}`}
+                className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${replyingTo ? "rounded-[24px]" : "rounded-full"}`}
                 style={inputPillStyle}
               >
                 {replyingTo && (
-                  <div className="flex relative items-center gap-2 bg-black/5 dark:bg-white/5 px-3 py-2 border-b border-black/5 dark:border-white/10 shadow-sm">
-                    <div className="w-[3px] h-9 bg-primary/80 rounded-full shrink-0" />
+                  <div className="flex relative items-center gap-3 bg-black/5 dark:bg-white/5 p-3 pb-2 border-b border-black/5 dark:border-white/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
                     <div className="flex-1 min-w-0 pr-8">
-                      <p className="text-[11.5px] font-semibold text-primary/90 mb-0.5">
+                      <p className="text-[11px] font-bold tracking-wide uppercase text-primary/80 mb-0.5">
                         Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
                       </p>
-                      <p className="text-[13px] text-muted-foreground truncate">{replyingTo.voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
+                      <p className="text-[13px] text-foreground/80 truncate font-medium">{(replyingTo as any).voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
                     </div>
-                    <button type="button"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReplyingTo(null); }}
-                      onTouchStart={(e) => { e.stopPropagation(); setReplyingTo(null); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-foreground/10 hover:bg-foreground/20 flex items-center justify-center shrink-0 transition-colors z-[100] cursor-pointer">
-                      <X size={14} className="text-foreground/70" />
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setReplyingTo(null);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all border border-foreground/5 z-[110] active:scale-90">
+                      <X size={15} className="text-foreground/60" />
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2 px-4 py-2.5">
+                <div className={`flex items-center gap-2 px-4 py-2.5 ${replyingTo ? "pt-1.5" : ""}`}>
                   <input value={input} onChange={handleInputChange}
                     onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
                     className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />

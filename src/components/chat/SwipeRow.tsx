@@ -24,9 +24,12 @@ function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string):
 export function SwipeRow({
   msg, isMe, isLast, isLastMyMsg, onReply, chatUser,
   playingVoice, setPlayingVoice, onImageTap, onReact, myUserId = "",
-  themeBubbleBg, themeBubbleText,
-  themeOtherBubbleBg, themeOtherBubbleText,
-  themeMutedText,
+  // Theme props — CSS color strings (not Tailwind classes)
+  themeBubbleBg,
+  themeBubbleText,
+  themeOtherBubbleBg,
+  themeOtherBubbleText,
+  themeMutedTextColor,  // CSS color string for timestamps
   MediaRenderer,
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
@@ -39,7 +42,7 @@ export function SwipeRow({
   themeBubbleText?: string;
   themeOtherBubbleBg?: string;
   themeOtherBubbleText?: string;
-  themeMutedText?: string;
+  themeMutedTextColor?: string;
   MediaRenderer?: any;
 }) {
   const [offsetX, setOffsetX] = useState(0);
@@ -50,7 +53,6 @@ export function SwipeRow({
 
   const grouped = groupReactions(msg.reactions, myUserId);
 
-  /* ── Swipe-to-reply (disabled when uploading) ── */
   const onTouchStart = (e: React.TouchEvent) => {
     if (msg.isUploading) return;
     startX.current = e.touches[0].clientX;
@@ -82,12 +84,10 @@ export function SwipeRow({
 
   const progress = Math.min(offsetX / SWIPE_THRESHOLD, 1);
 
-  // Pick correct bubble bg/text based on sender
+  // Resolve bubble styles — inline CSS colors take priority over Tailwind defaults
   const activeBubbleBg = isMe ? themeBubbleBg : themeOtherBubbleBg;
   const activeBubbleText = isMe ? themeBubbleText : themeOtherBubbleText;
-
-  // Timestamp muted color — use theme-aware if provided
-  const mutedTextClass = themeMutedText || "text-muted-foreground/55";
+  const hasTheme = !!(isMe ? themeBubbleBg : themeOtherBubbleBg);
 
   return (
     <div
@@ -96,27 +96,22 @@ export function SwipeRow({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* ── Swipe arrow OR "Sending…" indicator ── */}
+      {/* Swipe hint / uploading label */}
       {msg.isUploading ? (
-        <div
-          className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} -translate-y-1/2 z-10 pointer-events-none`}
-        >
-          <span className="text-[10px] font-semibold text-muted-foreground/70 animate-pulse whitespace-nowrap">
-            Sending…
-          </span>
+        <div className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} -translate-y-1/2 z-10 pointer-events-none`}>
+          <span className="text-[10px] font-semibold text-muted-foreground/70 animate-pulse whitespace-nowrap">Sending…</span>
         </div>
       ) : (
         <div
           className={`absolute top-1/2 ${isMe ? "right-1" : "left-1"} w-7 h-7 rounded-full
-            bg-secondary border border-border/40 flex items-center justify-center
-            pointer-events-none z-10`}
+            bg-secondary border border-border/40 flex items-center justify-center pointer-events-none z-10`}
           style={{ opacity: progress, transform: `translateY(-50%) scale(${0.5 + progress * 0.5})` }}
         >
           <ArrowLeft size={12} className={`text-muted-foreground ${isMe ? "rotate-180" : ""}`} />
         </div>
       )}
 
-      {/* ── Message bubble ── */}
+      {/* Bubble row */}
       <div
         className={`flex ${isMe ? "justify-end" : "justify-start"}`}
         style={{
@@ -132,26 +127,23 @@ export function SwipeRow({
                 chatUser={chatUser}
                 playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                 onImageTap={onImageTap}
-                themeBubbleBg={activeBubbleBg}
-                themeBubbleText={activeBubbleText}
+                themeBubbleBg={themeBubbleBg}
+                themeBubbleText={themeBubbleText}
+                themeOtherBubbleBg={themeOtherBubbleBg}
+                themeOtherBubbleText={themeOtherBubbleText}
                 MediaRenderer={MediaRenderer}
               />
             </div>
 
-            {/* Reaction badges */}
+            {/* Reactions */}
             {grouped.length > 0 && (
               <div className={`absolute bottom-0 ${isMe ? "right-0" : "left-0"} translate-y-1/2 z-10`}>
                 <div
                   className="flex items-center"
                   style={{
-                    background: "rgba(30,30,30,0.92)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    boxShadow: "0 2px 12px rgba(0,0,0,0.45)",
-                    backdropFilter: "blur(12px)",
-                    WebkitBackdropFilter: "blur(12px)",
-                    borderRadius: 999,
-                    padding: "2px 6px",
-                    gap: 2,
+                    background: "rgba(30,30,30,0.92)", border: "1px solid rgba(255,255,255,0.10)",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.45)", backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)", borderRadius: 999, padding: "2px 6px", gap: 2,
                   }}
                 >
                   {grouped.map(({ emoji, count, reacted }, idx) => (
@@ -172,14 +164,22 @@ export function SwipeRow({
             )}
           </div>
 
-          {/* ── Timestamp + Tick ── */}
+          {/* Timestamp + tick */}
           <div className={`flex items-center ${isMe ? "justify-end" : "justify-start"} gap-1 ${grouped.length > 0 ? "mt-4" : "mt-1"}`}>
             {msg.isUploading ? (
               <span className="text-[10px] text-primary/70 font-medium animate-pulse">Sending…</span>
             ) : (
               <>
                 {msg.timestamp && (
-                  <p className={`text-[11px] pr-0.5 ${mutedTextClass}`}>{msg.timestamp}</p>
+                  <p
+                    className="text-[11px] pr-0.5"
+                    style={{ color: themeMutedTextColor || undefined }}
+                  >
+                    {/* Fallback to Tailwind class when no theme color */}
+                    <span className={!themeMutedTextColor ? "text-muted-foreground/55" : undefined}>
+                      {msg.timestamp}
+                    </span>
+                  </p>
                 )}
                 {isMe && <StatusIcon status={msg.status} />}
               </>

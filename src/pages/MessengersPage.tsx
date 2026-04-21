@@ -110,6 +110,7 @@ const MessengersPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!titleRef.current || !searchContainerRef.current) return;
     if (isSearching) {
       gsap.to(titleRef.current, { opacity: 0, x: -8, duration: 0.22, ease: "expo.inOut" });
       gsap.to(moreBtnRef.current, { width: 0, opacity: 0, marginLeft: 0, duration: 0.25, ease: "expo.inOut" });
@@ -117,12 +118,14 @@ const MessengersPage = () => {
       gsap.set([searchInputRef.current, closeBtnRef.current], { display: "block" });
       gsap.to([searchInputRef.current, closeBtnRef.current], { opacity: 1, duration: 0.2, delay: 0.22 });
     } else {
-      gsap.to([searchInputRef.current, closeBtnRef.current], { opacity: 0, duration: 0.15, onComplete: () => gsap.set([searchInputRef.current, closeBtnRef.current], { display: "none" }) });
+      gsap.to([searchInputRef.current, closeBtnRef.current], { opacity: 0, duration: 0.15, onComplete: () => {
+        if (searchInputRef.current) gsap.set([searchInputRef.current, closeBtnRef.current], { display: "none" });
+      }});
       gsap.to(searchContainerRef.current, { width: "40px", duration: 0.35, ease: "expo.inOut", delay: 0.08 });
       gsap.to(titleRef.current, { opacity: 1, x: 0, duration: 0.28, ease: "expo.out", delay: 0.18 });
-      gsap.to(moreBtnRef.current, { width: "40px", opacity: 1, marginLeft: 8, duration: 0.28, ease: "expo.out", delay: 0.18 });
+      if (moreBtnRef.current) gsap.to(moreBtnRef.current, { width: "40px", opacity: 1, marginLeft: 8, duration: 0.28, ease: "expo.out", delay: 0.18 });
     }
-  }, [isSearching]);
+  }, [isSearching, selecting]); // Add selecting to dependency to re-check refs when header swaps
 
   /* ── long press ── */
   const startLongPress = useCallback((chatId: string, e: React.TouchEvent | React.MouseEvent) => {
@@ -376,7 +379,7 @@ const MessengersPage = () => {
         {/* ── Header ── */}
         {selecting ? (
           /* ── Selection header ── */
-          <div className="px-5 pt-6 pb-4 flex items-center gap-3" style={{ animation: "menuIn 0.18s ease both" }}>
+          <div key="select-header" className="px-5 pt-6 pb-4 flex items-center gap-3" style={{ animation: "menuIn 0.18s ease both" }}>
             {/* X to exit */}
             <button onClick={exitSelect} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0 active:scale-95 transition-transform">
               <X size={18} className="text-foreground" />
@@ -418,7 +421,7 @@ const MessengersPage = () => {
             </div>
           </div>
         ) : (
-          <div className="px-5 pt-6 pb-2 min-h-[64px] grid items-center">
+          <div key="normal-header" className="px-5 pt-6 pb-2 min-h-[64px] grid items-center">
             <h1 ref={titleRef} className="col-start-1 row-start-1 text-2xl font-bold tracking-tight text-foreground z-0 justify-self-start"
               style={{ pointerEvents: isSearching ? "none" : "auto" }}>
               {activeFilter === "All" ? "Chats" : activeFilter}
