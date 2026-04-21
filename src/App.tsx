@@ -21,6 +21,7 @@ import WelcomePage from "./pages/WelcomePage";
 import LoginPage from "./pages/LoginPage";
 import { ChatNotificationBanner } from "./components/ChatNotificationBanner";
 import { Loader2 } from "lucide-react";
+import { FirebaseInit } from "./components/FirebaseInit";
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
+        <FirebaseInit />
         <SocketProvider>
           <HashRouter>
             {/* Global in-app notification banner — outside <Routes> so it persists on all pages */}
