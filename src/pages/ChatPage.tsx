@@ -525,12 +525,12 @@ const ChatPage = () => {
       const cid = m.chatId?._id || m.chatId;
       if (!currentChat || cid !== currentChat._id) return;
       
+      const senderIdRaw = m.senderId?._id || m.senderId;
       setMessages(prev => {
         // Prevent duplicates
         if (prev.find(x => x.id === m._id)) return prev;
 
         const myId = user?._id;
-        const senderIdRaw = m.senderId?._id || m.senderId;
         const isMe = senderIdRaw === myId;
         
         let replyTo: Msg["replyTo"] | undefined;
@@ -567,7 +567,6 @@ const ChatPage = () => {
       }
 
       // Handle read receipts and global list invalidation for other's messages
-      const senderIdRaw = m.senderId?._id || m.senderId;
       if (senderIdRaw !== user?._id) {
         if (!isAtBottomRef.current) setUnreadWhileAway(c => c + 1);
         if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
@@ -589,9 +588,29 @@ const ChatPage = () => {
       const s = new Set(messageIds as string[]);
       setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" && s.has(m.id) ? { ...m, status: "delivered" } : m));
     };
-    const onRead = ({ chatId }: any) => {
+    const onRead = ({ chatId, readBy, user: readByUser }: any) => {
       if (!currentChat || chatId !== currentChat._id) return;
-      setMessages(p => p.map(m => m.senderId === "me" ? { ...m, status: "seen" } : m));
+      const rId = (readBy?._id || readBy)?.toString();
+      
+      setMessages(p => p.map(m => {
+        const isMyMsg = m.senderId === "me";
+        
+        if (isGroup && rId && rId !== user?._id) {
+          const currentRB = m.readBy || [];
+          const alreadyRead = currentRB.some(ru => (ru._id?.toString() || ru.toString()) === rId);
+          if (!alreadyRead) {
+            const userObj = readByUser || groupData?.participants?.find((x: any) => x._id === rId) || { _id: rId, name: "Someone", avatar: "" };
+            return {
+              ...m,
+              readBy: [...currentRB, userObj],
+              status: isMyMsg ? "seen" : m.status
+            };
+          }
+        }
+        
+        return isMyMsg ? { ...m, status: "seen" } : m;
+      }));
+      
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
     const onReaction = ({ messageId, reactions }: any) => setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
@@ -1166,7 +1185,7 @@ const ChatPage = () => {
                 {replyingTo && (
                   <div className="flex relative items-center gap-3 bg-black/5 dark:bg-white/5 p-3 pb-2 border-b border-black/5 dark:border-white/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
-                    <div className="flex-1 flex flex-col min-w-0" onClick={() => isGroup && setShowGroupInfo(true)} style={{ cursor: isGroup ? 'pointer' : 'default' }}>
+                    <div className="flex-1 flex flex-col min-w-0" onClick={() => isGroup && navigate(`/chat/group/${userId}/profile`)} style={{ cursor: isGroup ? 'pointer' : 'default' }}>
                       <h2 className="text-[17px] font-bold leading-tight truncate text-foreground pr-2">{chatUser?.name || "Chat"}</h2>
                       <p className="text-[12px] font-medium text-muted-foreground/90 truncate mr-2">
                         {isGroup ? `${groupData?.participants.length || 0} members` : statusLabel}

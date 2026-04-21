@@ -204,33 +204,39 @@ export function SwipeRow({
               {isGroup && msg.readBy && msg.readBy.length > 0 ? (
                 <>
                   <div 
-                    className="flex items-center -space-x-1.5 overflow-hidden py-0.5 cursor-pointer hover:opacity-80 transition-opacity" 
-                    onClick={() => setShowNames(!showNames)}
+                    className="flex flex-col items-end gap-1.5 py-0.5 cursor-pointer group" 
+                    onClick={(e) => { e.stopPropagation(); setShowNames(!showNames); }}
                   >
-                    {msg.readBy.filter(u => u._id !== myUserId).slice(0, 5).map((u: any) => (
-                      <img 
-                        key={u._id} 
-                        src={u.avatar || 'https://i.pravatar.cc/150'} 
-                        className="w-3.5 h-3.5 rounded-full border border-background object-cover" 
-                        alt={u.name} 
-                      />
-                    ))}
-                    {msg.readBy.length > 5 && (
-                      <div className="w-3.5 h-3.5 rounded-full bg-secondary border border-background flex items-center justify-center text-[7px] font-bold text-muted-foreground shrink-0">
-                        +{msg.readBy.length - 5}
+                    <div className="flex items-center -space-x-1.5 overflow-hidden transition-all group-hover:scale-105 active:scale-95">
+                      {msg.readBy.filter(u => (u?._id || u) !== myUserId).slice(0, 5).map((u: any) => (
+                        <img 
+                          key={u?._id || u} 
+                          src={u?.avatar || 'https://i.pravatar.cc/150'} 
+                          className="w-3.5 h-3.5 rounded-full border border-background object-cover shadow-sm bg-muted" 
+                          alt={u?.name || 'User'} 
+                          title={u?.name || 'User'}
+                        />
+                      ))}
+                      {msg.readBy.length > 5 && (
+                        <div className="w-3.5 h-3.5 rounded-full bg-secondary/80 border border-background flex items-center justify-center text-[7px] font-bold text-muted-foreground shrink-0 shadow-sm">
+                          +{msg.readBy.length - 5}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {showNames && (
+                      <div className="mt-1 flex flex-wrap justify-end gap-1.5 max-w-[200px] animate-in slide-in-from-top-1 fade-in duration-200">
+                        {msg.readBy.filter(u => (u?._id || u) !== myUserId).map((u: any) => (
+                          <span 
+                            key={u?._id || u} 
+                            className="bg-primary/5 text-primary/80 border border-primary/20 rounded-full px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest shadow-sm"
+                          >
+                            {u?.name ? u.name.split(' ')[0] : 'Member'}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
-                  
-                  {showNames && (
-                    <div className="mt-1 flex flex-wrap justify-end gap-x-1.5 animate-in slide-in-from-top-1 fade-in duration-200">
-                      {msg.readBy.filter(u => u._id !== myUserId).map(u => (
-                        <span key={u._id} className="text-[9px] font-bold text-primary/60 uppercase tracking-tighter">
-                          {u.name.split(' ')[0]}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </>
               ) : !isGroup && msg.status === "seen" && isLastMyMsg ? (
                 <span className="text-[10px] text-blue-500 font-medium">Seen</span>
