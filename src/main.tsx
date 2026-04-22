@@ -22,4 +22,13 @@ if ("serviceWorker" in navigator) {
       .then((reg) => console.log("FCM SW Registered", reg))
       .catch((err) => console.log("FCM SW registration failed", err));
   });
+
+  // Reload the page when a new service worker takes over control
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      window.location.reload();
+      refreshing = true;
+    }
+  });
 }
