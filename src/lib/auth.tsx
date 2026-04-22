@@ -9,6 +9,7 @@ export interface User {
   email: string;
   avatar: string;
   status: string;
+  pushNotificationsEnabled: boolean;
 }
 
 interface AuthContextType {
@@ -25,7 +26,6 @@ export const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
-
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     api.get("/auth/me")
       .then((res) => {
-        // Interceptor already unwrapped res.data.data into res.data
         setUser(res.data);
       })
       .catch(() => {
@@ -60,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-
 }
 
 const LoadingScreen = () => (

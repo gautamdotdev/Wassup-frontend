@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { generateToken, onMessageListener } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
 import api from "../lib/api";
-import { toast } from "sonner";
 
 export const FirebaseInit = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    // Only setup FCM if user exists AND has notifications enabled
+    if (user && user.pushNotificationsEnabled !== false) {
       const setupFCM = async () => {
         try {
           const token = await generateToken();
@@ -22,7 +22,7 @@ export const FirebaseInit = () => {
       };
       setupFCM();
     }
-  }, [user]);
+  }, [user, user?.pushNotificationsEnabled]);
 
   useEffect(() => {
     const unsubscribe = onMessageListener((payload: any) => {
@@ -40,7 +40,6 @@ export const FirebaseInit = () => {
     });
     
     return () => {
-      // unsubscribe is returned from onMessage
       if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, []);
