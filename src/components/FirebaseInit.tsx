@@ -35,18 +35,8 @@ export const FirebaseInit = () => {
       if (payloadChatId && currentHash.includes(`/chat/${payloadChatId}`)) {
         return;
       }
-
-      toast(payload.notification.title, {
-        description: payload.notification.body,
-        action: {
-          label: "View",
-          onClick: () => {
-            if (payloadChatId) {
-              window.location.hash = `#/chat/${payloadChatId}`;
-            }
-          }
-        }
-      });
+      
+      console.log("Notifying background only (in-app UI suppressed)");
     });
     
     return () => {

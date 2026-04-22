@@ -42,9 +42,7 @@ const App = () => (
         <FirebaseInit />
         <SocketProvider>
           <HashRouter>
-            {/* Global in-app notification banner — outside <Routes> so it persists on all pages */}
             <ChatNotificationBanner />
-
             <Routes>
               {/* Guest-only */}
               <Route path="/welcome" element={<GuestOnly><WelcomePage /></GuestOnly>} />
