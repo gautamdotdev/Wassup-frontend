@@ -177,6 +177,7 @@ const ChatPage = () => {
   const lpStartX = useRef(0);
   const lpStartY = useRef(0);
   const quickCameraRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   /* auth / socket */
   const { user } = useAuth();
@@ -217,6 +218,13 @@ const ChatPage = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reply") === "true") {
+      setTimeout(() => inputRef.current?.focus(), 500);
+    }
+  }, [location.search]);
 
   /* Group specific state */
   const [isGroup, setIsGroup] = useState(false);
@@ -1210,9 +1218,14 @@ const ChatPage = () => {
                   </div>
                 )}
                 <div className={`flex items-center gap-2 px-4 py-2.5 ${replyingTo ? "pt-1.5" : ""}`}>
-                  <input value={input} onChange={handleInputChange}
-                    onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Type here"
-                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" />
+                  <input 
+                    ref={inputRef}
+                    value={input} 
+                    onChange={handleInputChange}
+                    onKeyDown={e => e.key === "Enter" && sendMessage()} 
+                    placeholder="Type here"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" 
+                  />
                   {hasContent
                     ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
                     : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>

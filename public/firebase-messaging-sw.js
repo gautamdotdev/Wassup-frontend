@@ -13,11 +13,46 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/icon-192.png'
+    icon: payload.notification.image || '/icon-192.png',
+    data: {
+      ...payload.data,
+      senderId: payload.data?.senderId
+    },
+    actions: [
+      { action: "reply", title: "Reply" },
+      { action: "open", title: "Open Chat" }
+    ]
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const senderId = event.notification.data?.senderId;
+  if (!senderId) return;
+
+  let url = `/chat/${senderId}`;
+  if (event.action === "reply") {
+    url += "?reply=true";
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes(url) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
 });
