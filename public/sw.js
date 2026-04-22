@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wassup-cache-v2'; // Incremented version
+const CACHE_NAME = 'wassup-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,7 +9,7 @@ const urlsToCache = [
 
 // Install: Cache essential assets
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
   );
@@ -22,34 +22,36 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Immediately take control of all open clients
+    }).then(() => self.clients.claim())
   );
 });
 
-// Fetch: Network-First Strategy 
-// This ensures mobile users always get the latest code if online, 
-// but can still open the app while offline.
+// Fetch: Stale-While-Revalidate Strategy
+// Best balance: Fast load from cache, background update for next visit.
 self.addEventListener('fetch', (event) => {
-  // We only handle GET requests
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // If network fetch is successful, clone it and save to cache
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-      })
-      .catch(() => {
-        // If network fails (offline), try to serve from cache
-        return caches.match(event.request);
-      })
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // Update cache with the fresh response
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        // Fallback for network failure is handled by returning cachedResponse
+      });
+
+      // Return cached version immediately if it exists, otherwise wait for network
+      return cachedResponse || fetchPromise;
+    })
   );
 });
