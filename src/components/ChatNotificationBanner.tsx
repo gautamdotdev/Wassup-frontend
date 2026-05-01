@@ -77,9 +77,10 @@ export function ChatNotificationBanner() {
       );
       const chatUserId: string = (otherUser?._id || senderId)?.toString();
 
-      // Suppress if already viewing this chat
+      // Suppress ALL banners if I am on ANY chat page
+      if (location.pathname.startsWith('/chat/')) return;
+
       const chatId: string = (m.chatId?._id || m.chatId)?.toString();
-      if (currentChatId && (currentChatId === chatUserId || currentChatId === chatId)) return;
 
       // Suppress if muted
       if (mutedChats.current.has(chatUserId) || (chatId && mutedChats.current.has(chatId))) return;

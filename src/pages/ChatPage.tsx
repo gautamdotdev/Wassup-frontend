@@ -380,7 +380,11 @@ const ChatPage = () => {
     } catch { toast.error("Failed to update notifications"); }
     setShowMenu(false);
   };
-  const handleMediaFiles = () => { navigate(`/chat/${userId}/media`); setShowMenu(false); };
+   const handleMediaFiles = () => { 
+    const path = isGroup ? `/chat/group/${userId}/media` : `/chat/${userId}/media`;
+    navigate(path); 
+    setShowMenu(false); 
+  };
   const handleChatTheme = () => { setShowThemePicker(true); setShowMenu(false); };
 
   const applyTheme = async (theme: ChatTheme) => {
@@ -447,7 +451,10 @@ const ChatPage = () => {
       setMessages(p => p.filter(m => m.id !== msg.id));
     }
     try {
-      await api.delete(`/messages/${msg.id}`, { data: { deleteForEveryone: forEveryone } });
+      await api.delete(`/messages/${msg.id}`, { 
+        params: { deleteForEveryone: forEveryone },
+        data: { deleteForEveryone: forEveryone } 
+      });
       if (!forEveryone) {
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       }

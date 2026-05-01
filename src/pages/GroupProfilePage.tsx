@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Edit2, UserPlus, UserMinus, LogOut, Trash2, 
   Shield, Settings, Search, Camera, Loader2, ChevronRight,
-  MoreVertical, X, Check
+  MoreVertical, X, Check, ImageIcon
 } from "lucide-react";
 import { User, Chat } from "../types/chat";
 import api from "../lib/api";
@@ -331,6 +331,25 @@ const GroupProfilePage = () => {
               <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Admins</span>
             </div>
           </div>
+        </div>
+
+        {/* Media shortcut card */}
+        <div className="w-full px-5 mt-6 mb-4">
+          <button
+            onClick={() => navigate(window.location.pathname.replace('/profile', '/media'))}
+            className="w-full bg-card rounded-[22px] px-5 py-4 shadow-sm border border-border/20 flex items-center justify-between hover:bg-secondary/30 transition-colors active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <ImageIcon size={18} className="text-blue-500" strokeWidth={1.8} />
+              </div>
+              <div className="text-left">
+                <p className="text-[15px] font-semibold text-foreground leading-tight">Media & Files</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">View all shared media</p>
+              </div>
+            </div>
+            <ChevronRight size={17} className="text-muted-foreground/60" />
+          </button>
         </div>
 
         <div className="space-y-4 mb-8">
