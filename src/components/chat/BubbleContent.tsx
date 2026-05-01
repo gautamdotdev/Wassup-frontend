@@ -15,6 +15,7 @@ export function BubbleContent({
   themeOtherBubbleBg, themeOtherBubbleText,
   MediaRenderer,
   isGroup = false,
+  highlightText = "",
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; chatUser?: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
@@ -25,6 +26,7 @@ export function BubbleContent({
   themeOtherBubbleText?: string;
   MediaRenderer?: any;
   isGroup?: boolean;
+  highlightText?: string;
 }) {
   // Neutral fallback styles
   const neutralBgClass = "bg-[#f0f0f0] dark:bg-[#2a2a2a] border border-black/[0.1] dark:border-white/[0.08]";
@@ -49,6 +51,22 @@ export function BubbleContent({
         return msg.sender?.name || (chatUser?.name?.split(" ")[0] || "Them");
     }
     return (chatUser?.name?.split(" ")[0] || "Them");
+  };
+
+  const renderTextWithHighlight = (text: string) => {
+    if (!highlightText || !text) return text;
+    const parts = text.split(new RegExp(`(${highlightText})`, "gi"));
+    return (
+      <>
+        {parts.map((part, i) => (
+          part.toLowerCase() === highlightText.toLowerCase() ? (
+            <span key={i} className="bg-yellow-400/40 dark:bg-yellow-400/30 text-foreground ring-1 ring-yellow-400/50 rounded-sm px-0.5">{part}</span>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        ))}
+      </>
+    );
   };
 
   /* ── voice ── */
@@ -81,7 +99,9 @@ export function BubbleContent({
         <MediaRenderer src={msg.images[0]} mediaType="video" className="w-full max-h-64 object-cover bg-black" />
         {msg.text && (
           <div className={`px-3 py-2 ${bubbleClass}`} style={bubbleStyle}>
-            <p className={`text-[14px] leading-[1.55] ${textClass}`} style={textStyle}>{msg.text}</p>
+            <p className={`text-[14px] leading-[1.55] ${textClass}`} style={textStyle}>
+              {renderTextWithHighlight(msg.text)}
+            </p>
           </div>
         )}
       </div>
@@ -96,7 +116,9 @@ export function BubbleContent({
         <ImageGrid images={msg.images} onTap={i => onImageTap(msg.images!, i)} />
         {msg.text && (
           <div className={`px-3 py-2 ${bubbleClass}`} style={bubbleStyle}>
-            <p className={`text-[14px] leading-[1.55] ${textClass}`} style={textStyle}>{msg.text}</p>
+            <p className={`text-[14px] leading-[1.55] ${textClass}`} style={textStyle}>
+              {renderTextWithHighlight(msg.text)}
+            </p>
           </div>
         )}
       </div>
@@ -127,7 +149,9 @@ export function BubbleContent({
         </button>
       )}
       <div className={`flex items-end gap-2 ${msg.replyTo ? "px-3 pb-3 pt-2" : "px-4 py-2.5"}`}>
-        <p className={`text-[14px] leading-[1.55] flex-1 ${textClass}`} style={textStyle}>{msg.text}</p>
+        <p className={`text-[14px] leading-[1.55] flex-1 ${textClass}`} style={textStyle}>
+          {renderTextWithHighlight(msg.text || "")}
+        </p>
         {msg.image && (
           <button onClick={() => onImageTap([msg.image!], 0)}>
             <MediaRenderer src={msg.image} className="w-14 h-14 rounded-xl object-cover shrink-0 border border-black/[0.08]" />

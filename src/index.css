@@ -36,6 +36,11 @@
     --welcome-muted: #6b6b6b;
     --welcome-btn-bg: #1a1a1a;
     --welcome-btn-fg: #ffffff;
+    
+    /* Typography tokens */
+    --app-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --app-letter-spacing: -0.011em;
+    --app-heading-letter-spacing: -0.025em;
   }
 
   .dark {
@@ -76,18 +81,32 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--app-font-family);
+    letter-spacing: var(--app-letter-spacing);
     -webkit-font-smoothing: antialiased;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: var(--app-heading-letter-spacing);
+  }
+  a {
+    text-decoration: none !important;
   }
   input, textarea {
     user-select: text;
     -webkit-user-select: text;
+  }
+  button:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
   }
 }
 
@@ -98,4 +117,20 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Custom Scrollbar for desktop */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.3);
 }

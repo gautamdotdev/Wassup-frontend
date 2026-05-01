@@ -35,6 +35,10 @@ export interface Msg {
   status?: "sent" | "delivered" | "seen";
   readBy?: User[]; // Users who read the message
   isUploading?: boolean;  // true while media file is being uploaded to Cloudinary
+  isSystem?: boolean;
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  createdAt?: string;
 }
 
 export interface Chat {

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const heicCache = new Map<string, string>();
 
 export function isHeicUrl(url: string) {
-  return /\.(heic|heif)$/i.test(url);
+  return /\.(heic|heif)$/i.test(url) || /^data:image\/heic/i.test(url) || /^data:image\/heif/i.test(url);
 }
 
 export function isMov(url: string) {
@@ -24,6 +24,14 @@ export function useMediaUrl(rawUrl: string | undefined) {
 
   useEffect(() => {
     if (!rawUrl) return;
+
+    // Cloudinary optimization for remote HEIC files
+    if (rawUrl.includes("cloudinary.com") && isHeicUrl(rawUrl)) {
+      // Insert f_auto to let Cloudinary handle the conversion
+      const optimizedUrl = rawUrl.replace("/upload/", "/upload/f_auto,q_auto/");
+      setUrl(optimizedUrl);
+      return;
+    }
 
     // Not HEIC — use as-is
     if (!isHeicUrl(rawUrl)) {

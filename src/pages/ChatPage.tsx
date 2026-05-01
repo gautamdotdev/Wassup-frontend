@@ -4,8 +4,9 @@ import {
   ArrowLeft, Phone, Video, MoreVertical, X, BellOff, Bell,
   Search, Image, Palette, ChevronRight, ChevronDown,
   Ban, Trash2, Download, Flag, Reply, Copy,
-  Forward, Info, Plus, ChevronUp,
+  Forward, Info, Plus, ChevronUp, Pencil,
 } from "lucide-react";
+import { FaPencilAlt } from "react-icons/fa";
 import { FiPlus, FiCamera, FiSend } from "react-icons/fi";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -218,6 +219,8 @@ const ChatPage = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
+  const [hasScrolledOnLoad, setHasScrolledOnLoad] = useState(false);
+  const [editingMsg, setEditingMsg] = useState<Msg | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -432,13 +435,22 @@ const ChatPage = () => {
   const handleMsgCopy = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
   const handleMsgForward = (_msg: Msg) => { toast.info("Forward coming soon"); closeMsgMenu(); };
   const handleMsgInfo = (msg: Msg) => { setMsgInfoOpen(msg); closeMsgMenu(); };
-  const handleMsgDelete = async (msg: Msg) => {
+  const handleMsgEdit = (msg: Msg) => {
+    setEditingMsg(msg);
+    setInput(msg.text || "");
     closeMsgMenu();
-    setMessages(p => p.filter(m => m.id !== msg.id));
+    setTimeout(() => inputRef.current?.focus(), 80);
+  };
+  const handleMsgDelete = async (msg: Msg, forEveryone = false) => {
+    closeMsgMenu();
+    if (!forEveryone) {
+      setMessages(p => p.filter(m => m.id !== msg.id));
+    }
     try {
-      await api.delete(`/messages/${msg.id}`);
-      if (socket && currentChat) socket.emit("message deleted", { messageId: msg.id, chatId: currentChat._id });
-      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      await api.delete(`/messages/${msg.id}`, { data: { deleteForEveryone: forEveryone } });
+      if (!forEveryone) {
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+      }
     } catch { toast.error("Failed to delete"); }
   };
 
@@ -473,9 +485,9 @@ const ChatPage = () => {
         if (!active) return;
         setCurrentChat(chatData);
         setGroupData(chatData);
-        
+
         if (isGroupId) {
-           setChatUser({ name: chatData.chatName, avatar: chatData.avatar });
+          setChatUser({ name: chatData.chatName, avatar: chatData.avatar });
         } else {
           const other = chatData.participants.find((p: any) => p._id !== user?._id);
           setChatUser(other);
@@ -503,7 +515,7 @@ const ChatPage = () => {
             replyTo = { id: m.replyTo._id, senderId: rtId === myId ? "me" : "other", text: m.replyTo.text || "Voice message" };
           }
           return {
-            id: m._id, senderId: isMe ? "me" : "other", 
+            id: m._id, senderId: isMe ? "me" : "other",
             sender: m.senderId,
             text: m.text,
             timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
@@ -512,11 +524,17 @@ const ChatPage = () => {
             reactions: m.reactions || [],
             ...(replyTo ? { replyTo } : {}),
             ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+            isSystem: m.isSystem,
+            isEdited: m.isEdited,
+            createdAt: m.createdAt,
           };
         });
         prevMsgCountRef.current = mapped.length;
         setMessages(mapped);
-        await api.post(`/messages/read/${chatData._id}`).catch(() => { });
+        const hasUnreadFromOthers = mapped.some(m => m.senderId === "other" && !m.readBy?.some(u => (u?._id || u) === myId));
+        if (hasUnreadFromOthers) {
+          await api.post(`/messages/read/${chatData._id}`).catch(() => { });
+        }
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err: any) {
         if (err.response?.status === 403) { toast.error("Must connect before chatting"); navigate("/search"); }
@@ -532,7 +550,7 @@ const ChatPage = () => {
     const onNewMsg = (m: any) => {
       const cid = m.chatId?._id || m.chatId;
       if (!currentChat || cid !== currentChat._id) return;
-      
+
       const senderIdRaw = m.senderId?._id || m.senderId;
       setMessages(prev => {
         // Prevent duplicates
@@ -540,14 +558,14 @@ const ChatPage = () => {
 
         const myId = user?._id;
         const isMe = senderIdRaw === myId;
-        
+
         let replyTo: Msg["replyTo"] | undefined;
         if (m.replyTo) {
           const rtIdRaw = m.replyTo.senderId?._id || m.replyTo.senderId;
-          replyTo = { 
-            id: m.replyTo._id || m.replyTo, 
-            senderId: (rtIdRaw === myId) ? "me" : "other", 
-            text: m.replyTo.text || (m.replyTo.mediaUrl ? "Media message" : "Voice message") 
+          replyTo = {
+            id: m.replyTo._id || m.replyTo,
+            senderId: (rtIdRaw === myId) ? "me" : "other",
+            text: m.replyTo.text || (m.replyTo.mediaUrl ? "Media message" : "Voice message")
           };
         }
 
@@ -562,6 +580,9 @@ const ChatPage = () => {
           reactions: m.reactions || [],
           ...(replyTo ? { replyTo } : {}),
           ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+          isSystem: m.isSystem,
+          isEdited: m.isEdited,
+          createdAt: m.createdAt,
         };
 
         return [...prev, newMsg];
@@ -575,7 +596,7 @@ const ChatPage = () => {
       }
 
       // Handle read receipts and global list invalidation for other's messages
-      if (senderIdRaw !== user?._id) {
+      if (senderIdRaw.toString() !== user?._id?.toString()) {
         if (!isAtBottomRef.current) setUnreadWhileAway(c => c + 1);
         if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
         readDebounceRef.current = setTimeout(() => {
@@ -599,10 +620,10 @@ const ChatPage = () => {
     const onRead = ({ chatId, readBy, user: readByUser }: any) => {
       if (!currentChat || chatId !== currentChat._id) return;
       const rId = (readBy?._id || readBy)?.toString();
-      
+
       setMessages(p => p.map(m => {
         const isMyMsg = m.senderId === "me";
-        
+
         if (isGroup && rId && rId !== user?._id) {
           const currentRB = m.readBy || [];
           const alreadyRead = currentRB.some(ru => (ru._id?.toString() || ru.toString()) === rId);
@@ -615,14 +636,43 @@ const ChatPage = () => {
             };
           }
         }
-        
+
         return isMyMsg ? { ...m, status: "seen" } : m;
       }));
-      
+
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
     const onReaction = ({ messageId, reactions }: any) => setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
     const onMsgDeleted = ({ messageId }: any) => setMessages(p => p.filter(m => m.id !== messageId));
+    const onMsgEdited = ({ messageId, text, systemMsg, isEdited }: any) => {
+      setMessages(p => {
+        const next = p.map(m => m.id === messageId ? { ...m, text, isEdited: isEdited ?? true } : m);
+        if (systemMsg) {
+          const sys = {
+            id: systemMsg._id,
+            senderId: "other",
+            text: systemMsg.text,
+            isSystem: true,
+            timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          };
+          if (!next.find(x => x.id === sys.id)) next.push(sys);
+        }
+        return next;
+      });
+    };
+    const onSystemEvent = ({ systemMsg }: any) => {
+      if (!systemMsg) return;
+      setMessages(p => {
+        if (p.find(x => x.id === systemMsg._id)) return p;
+        return [...p, {
+          id: systemMsg._id,
+          senderId: "other",
+          text: systemMsg.text,
+          isSystem: true,
+          timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+        }];
+      });
+    };
 
     socket.on("message recieved", onNewMsg);
     socket.on("message received", onNewMsg); // Catch both spellings
@@ -631,6 +681,12 @@ const ChatPage = () => {
     socket.on("messages read", onRead);
     socket.on("reaction updated", onReaction);
     socket.on("message deleted", onMsgDeleted);
+    socket.on("message edited", onMsgEdited);
+    socket.on("member-added", onSystemEvent);
+    socket.on("member-removed", onSystemEvent);
+    socket.on("user-left", onSystemEvent);
+    socket.on("theme-updated", onSystemEvent);
+    socket.on("settings-updated", onSystemEvent);
     socket.on("typing", (data: any) => {
       const uid = data.userId || data._id;
       if (isGroup) {
@@ -669,6 +725,10 @@ const ChatPage = () => {
       socket.off("message recieved", onNewMsg); socket.off("message delivered", onDelivered);
       socket.off("messages delivered", onManyDelivered); socket.off("messages read", onRead);
       socket.off("reaction updated", onReaction); socket.off("message deleted", onMsgDeleted);
+      socket.off("message edited", onMsgEdited);
+      socket.off("member-added", onSystemEvent); socket.off("member-removed", onSystemEvent);
+      socket.off("user-left", onSystemEvent); socket.off("theme-updated", onSystemEvent);
+      socket.off("settings-updated", onSystemEvent);
       socket.off("typing"); socket.off("stop typing"); socket.off("user-online"); socket.off("user-offline");
     };
   }, [socket, currentChat, user, queryClient]);
@@ -680,7 +740,24 @@ const ChatPage = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (messages.length > 0) scrollToBottom("instant" as ScrollBehavior);
+    setHasScrolledOnLoad(false);
+  }, [currentChat?._id]);
+
+  useEffect(() => {
+    if (messages.length > 0 && !hasScrolledOnLoad) {
+      // Use a small timeout to ensure DOM is ready
+      setTimeout(() => {
+        scrollToBottom("instant" as ScrollBehavior);
+        setHasScrolledOnLoad(true);
+      }, 100);
+    }
+  }, [messages, hasScrolledOnLoad]);
+
+  useEffect(() => {
+    if (messages.length > 0 && currentChat) {
+      // Just a safety scroll on chat change
+      scrollToBottom("instant" as ScrollBehavior);
+    }
   }, [currentChat?._id]);
 
   useEffect(() => () => {
@@ -722,6 +799,16 @@ const ChatPage = () => {
 
   const sendMessage = async () => {
     if (!input.trim() && pendingImages.length === 0) return;
+    if (editingMsg) {
+      const msgId = editingMsg.id;
+      const newText = input.trim();
+      setMessages(p => p.map(m => m.id === msgId ? { ...m, text: newText } : m));
+      setEditingMsg(null);
+      setInput("");
+      try { await api.patch(`/messages/${msgId}`, { text: newText }); }
+      catch { toast.error("Edit failed"); }
+      return;
+    }
     if (!currentChat) return;
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     if (socket) socket.emit("stop typing", currentChat._id);
@@ -789,10 +876,17 @@ const ChatPage = () => {
 
   const msgMenuActions = msgMenu ? [
     { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msgMenu.msg) },
+    {
+      icon: <Pencil size={15} strokeWidth={1.5} />,
+      label: "Edit",
+      fn: () => handleMsgEdit(msgMenu.msg),
+      hide: msgMenu.msg.senderId !== "me" || !!msgMenu.msg.images?.length || (msgMenu.msg.createdAt && new Date(msgMenu.msg.createdAt).getTime() < Date.now() - 3600000)
+    },
     { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msgMenu.msg), hide: !msgMenu.msg.text },
     { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msgMenu.msg) },
     { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msgMenu.msg) },
-    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete", fn: () => handleMsgDelete(msgMenu.msg), danger: true, hide: !(msgMenu.msg.senderId === "me") && !isGroupAdmin },
+    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for me", fn: () => handleMsgDelete(msgMenu.msg, false), danger: true },
+    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for everyone", fn: () => handleMsgDelete(msgMenu.msg, true), danger: true, hide: msgMenu.msg.senderId !== "me" && !isGroupAdmin },
   ].filter((a: any) => !a.hide) : [];
 
   // Compute the chat container background style
@@ -958,8 +1052,8 @@ const ChatPage = () => {
                   <span className="text-[11px] truncate opacity-80 transition-colors duration-300"
                     style={{ color: (isTyping || typingUsers.length > 0) ? "hsl(var(--primary))" : (!isGroup && isOnline) ? "hsl(142 70% 45%)" : "hsl(var(--muted-foreground))" }}>
                     {isGroup ? (
-                      typingUsers.length > 0 
-                        ? `${typingUsers[0].name} is typing...` 
+                      typingUsers.length > 0
+                        ? `${typingUsers[0].name} is typing...`
                         : `${groupData?.participants?.length || 0} members`
                     ) : statusLabel}
                   </span>
@@ -1069,12 +1163,24 @@ const ChatPage = () => {
             const isLastMyMsg = index === lastSeenIdx;
             const isCurrentHit = searchResults[searchIdx]?._id === msg.id;
 
+            if (msg.isSystem) {
+              return (
+                <div key={msg.id} className="flex justify-center my-6 px-10">
+                  <div className="px-4 py-1.5 rounded-full bg-secondary/40 backdrop-blur-sm border border-border/20 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+                    <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em] text-center leading-relaxed">
+                      {msg.text}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+
             // Only show participant avatar on the LATEST message they've read
             const effectiveReadBy = isGroup ? (msg.readBy || []).filter(u => {
               const uId = typeof u === 'string' ? u : u._id;
               if (uId === user?._id) return false; // Don't show me in read stack
               // Find if there's any later message seen by this user
-              const laterMsgWithUser = messages.slice(index + 1).find(m => 
+              const laterMsgWithUser = messages.slice(index + 1).find(m =>
                 m.readBy?.some(ru => (typeof ru === 'string' ? ru : ru._id) === uId)
               );
               return !laterMsgWithUser;
@@ -1102,6 +1208,7 @@ const ChatPage = () => {
                     themeMutedTextColor={isDefault ? undefined : themeDef.mutedText}
                     MediaRenderer={MediaRenderer}
                     isGroup={isGroup}
+                    highlightText={searchQuery}
                   />
                 </div>
               </div>
@@ -1187,25 +1294,32 @@ const ChatPage = () => {
                 <FiPlus size={24} />
               </button>
               <div
-                className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${replyingTo ? "rounded-[24px]" : "rounded-full"}`}
+                className="flex-1 flex flex-col overflow-hidden transition-all duration-300 rounded-[28px]"
                 style={inputPillStyle}
               >
+                {editingMsg && (
+                  <div className="flex relative items-center gap-3 bg-primary/10 dark:bg-primary/5 p-3 pb-2 border-b border-primary/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0" />
+                    <div className="flex-1 min-w-0 pr-8">
+                      <p className="text-[11px] font-bold tracking-wide uppercase text-primary mb-0.5">Editing Message</p>
+                      <p className="text-[13px] text-foreground/80 truncate font-medium">{editingMsg.text}</p>
+                    </div>
+                    <button type="button" onClick={() => { setEditingMsg(null); setInput(""); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all active:scale-90">
+                      <X size={15} className="text-foreground/60" />
+                    </button>
+                  </div>
+                )}
                 {replyingTo && (
                   <div className="flex relative items-center gap-3 bg-black/5 dark:bg-white/5 p-3 pb-2 border-b border-black/5 dark:border-white/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
-                    <div className="flex-1 flex flex-col min-w-0" onClick={() => isGroup && navigate(`/chat/group/${userId}/profile`)} style={{ cursor: isGroup ? 'pointer' : 'default' }}>
-                      <h2 className="text-[17px] font-bold leading-tight truncate text-foreground pr-2">{chatUser?.name || "Chat"}</h2>
-                      <p className="text-[12px] font-medium text-muted-foreground/90 truncate mr-2">
-                        {isGroup ? `${groupData?.participants.length || 0} members` : statusLabel}
-                      </p>
-                    </div>
                     <div className="flex-1 min-w-0 pr-8">
                       <p className="text-[11px] font-bold tracking-wide uppercase text-primary/80 mb-0.5">
                         Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
                       </p>
                       <p className="text-[13px] text-foreground/80 truncate font-medium">{(replyingTo as any).voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
@@ -1218,13 +1332,13 @@ const ChatPage = () => {
                   </div>
                 )}
                 <div className={`flex items-center gap-2 px-4 py-2.5 ${replyingTo ? "pt-1.5" : ""}`}>
-                  <input 
+                  <input
                     ref={inputRef}
-                    value={input} 
+                    value={input}
                     onChange={handleInputChange}
-                    onKeyDown={e => e.key === "Enter" && sendMessage()} 
+                    onKeyDown={e => e.key === "Enter" && sendMessage()}
                     placeholder="Type here"
-                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1" 
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1"
                   />
                   {hasContent
                     ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>

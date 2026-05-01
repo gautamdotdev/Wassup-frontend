@@ -32,6 +32,7 @@ export function SwipeRow({
   themeMutedTextColor,  // CSS color string for timestamps
   MediaRenderer,
   isGroup = false,
+  highlightText = "",
 }: {
   msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
@@ -46,6 +47,7 @@ export function SwipeRow({
   themeMutedTextColor?: string;
   MediaRenderer?: any;
   isGroup?: boolean;
+  highlightText?: string;
 }) {
   const [offsetX, setOffsetX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -144,6 +146,7 @@ export function SwipeRow({
                 themeOtherBubbleText={themeOtherBubbleText}
                 MediaRenderer={MediaRenderer}
                 isGroup={isGroup}
+                highlightText={highlightText}
               />
             </div>
 
@@ -182,6 +185,9 @@ export function SwipeRow({
               <span className="text-[10px] text-primary/70 font-medium animate-pulse">Sending…</span>
             ) : (
               <>
+                {msg.isEdited && (
+                  <span className="text-[9px] text-muted-foreground/50 font-medium italic mr-1 select-none">Edited</span>
+                )}
                 {msg.timestamp && (
                   <p
                     className="text-[11px] pr-0.5"
