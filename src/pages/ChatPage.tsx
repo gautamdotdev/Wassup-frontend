@@ -1407,7 +1407,7 @@ const ChatPage = () => {
 
         {/* Bottom bar */}
         <div
-          className={`relative z-[50] sticky bottom-0 shrink-0 pb-2 pt-2 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          className={`relative z-[50] sticky bottom-0 shrink-0 pb-0 pt-2 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
           style={!isDefault ? bottomGradientStyle : undefined}
         >
           {/* Pending images strip */}
@@ -1435,8 +1435,13 @@ const ChatPage = () => {
             </div>
           ) : (
             <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
+              <button onClick={() => setShowAttachPanel(true)}
+                className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                style={inputPillStyle}>
+                <FiPlus size={24} />
+              </button>
               <div
-                className="flex-1 flex flex-col overflow-hidden transition-all duration-300 rounded-[26px]"
+                className="flex-1 flex flex-col overflow-hidden transition-all duration-300 rounded-[28px]"
                 style={inputPillStyle}
               >
                 {editingMsg && (
@@ -1473,13 +1478,7 @@ const ChatPage = () => {
                     </button>
                   </div>
                 )}
-                
-                <div className="flex items-end gap-2 px-3 py-2">
-                  {/* Emoji button */}
-                  <button className="text-muted-foreground hover:text-foreground transition-colors p-1.5 mb-0.5 shrink-0">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5s.67 1.5 1.5 1.5zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
-                  </button>
-
+                <div className={`flex items-center gap-2 px-4 py-2 ${replyingTo ? "pt-1" : "pt-2.5"}`}>
                   <textarea
                     ref={inputRef as any}
                     rows={1}
@@ -1491,7 +1490,7 @@ const ChatPage = () => {
                       handleInputChange(e as any);
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = "auto";
-                      const newHeight = Math.min(target.scrollHeight, 150);
+                      const newHeight = Math.min(target.scrollHeight, 120);
                       target.style.height = `${newHeight}px`;
                     }}
                     onKeyDown={e => {
@@ -1502,35 +1501,15 @@ const ChatPage = () => {
                         target.style.height = "auto";
                       }
                     }}
-                    placeholder="Message"
-                    className="flex-1 bg-transparent text-[16px] text-foreground placeholder:text-muted-foreground/60 outline-none py-1.5 resize-none max-h-[150px] transition-all scrollbar-none"
+                    placeholder="Type a message"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-1 resize-none max-h-[120px] transition-all scrollbar-none"
                   />
-
-                  {/* Attachment button */}
-                  <button onClick={() => setShowAttachPanel(true)} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 mb-0.5 shrink-0">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-                  </button>
-
-                  {!hasContent && (
-                    <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 mb-0.5 shrink-0">
-                      <FiCamera size={24} />
-                    </button>
-                  )}
+                  {hasContent
+                    ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"><FiSend size={20} /></button>
+                    : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors p-2 shrink-0"><FiCamera size={20} /></button>
+                  }
                 </div>
               </div>
-
-              {/* Circular Action Button (Send or Mic) */}
-              <button
-                onClick={hasContent ? sendMessage : undefined}
-                className="w-[52px] h-[52px] rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 shadow-md"
-                style={{ backgroundColor: "rgb(37, 211, 102)", color: "#fff" }} // WhatsApp Green
-              >
-                {hasContent ? (
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className="ml-0.5"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-                )}
-              </button>
             </div>
           )}
         </div>
