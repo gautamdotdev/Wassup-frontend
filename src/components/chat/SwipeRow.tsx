@@ -22,7 +22,7 @@ function groupReactions(reactions: MsgReaction[] | undefined, myUserId: string):
 }
 
 export function SwipeRow({
-  msg, isMe, isLast, isLastMyMsg, onReply, chatUser,
+  msg, isMe, isLast, isFirst, isLastMyMsg, onReply, chatUser,
   playingVoice, setPlayingVoice, onImageTap, onReact, myUserId = "",
   // Theme props — CSS color strings (not Tailwind classes)
   themeBubbleBg,
@@ -34,7 +34,7 @@ export function SwipeRow({
   isGroup = false,
   highlightText = "",
 }: {
-  msg: Msg; isMe: boolean; isLast: boolean; isLastMyMsg: boolean;
+  msg: Msg; isMe: boolean; isLast: boolean; isFirst: boolean; isLastMyMsg: boolean;
   onReply: (m: Msg) => void; chatUser: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
   onImageTap: (images: string[], startIndex: number) => void;
@@ -136,7 +136,7 @@ export function SwipeRow({
           <div className="relative">
             <div style={{ paddingBottom: grouped.length > 0 ? "16px" : undefined }}>
               <BubbleContent
-                msg={msg} isMe={isMe} isLast={isLast}
+                msg={msg} isMe={isMe} isLast={isLast} isFirst={isFirst}
                 chatUser={chatUser}
                 playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                 onImageTap={onImageTap}
@@ -188,12 +188,11 @@ export function SwipeRow({
                 {msg.isEdited && (
                   <span className="text-[9px] text-muted-foreground/50 font-medium italic mr-1 select-none">Edited</span>
                 )}
-                {msg.timestamp && (
+                {msg.timestamp && isLast && (
                   <p
                     className="text-[11px] pr-0.5"
                     style={{ color: themeMutedTextColor || undefined }}
                   >
-                    {/* Fallback to Tailwind class when no theme color */}
                     <span className={!themeMutedTextColor ? "text-muted-foreground/55" : undefined}>
                       {msg.timestamp}
                     </span>

@@ -219,8 +219,77 @@ const ChatPage = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
-  const [hasScrolledOnLoad, setHasScrolledOnLoad] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [editingMsg, setEditingMsg] = useState<Msg | null>(null);
+
+  const fetchMoreMessages = useCallback(async () => {
+    if (loadingMore || !hasMore || !currentChat || messages.length === 0) return;
+    setLoadingMore(true);
+    
+    // Save current scroll height to restore later
+    const oldScrollHeight = scrollRef.current?.scrollHeight || 0;
+
+    try {
+      const oldestMsg = messages[0];
+      const { data } = await api.get(`/messages/${currentChat._id}`, {
+        params: { cursor: oldestMsg.createdAt, limit: 30 }
+      });
+
+      if (data.length < 30) setHasMore(false);
+
+      const myId = user?._id;
+      const mapped: Msg[] = data.map((m: any) => {
+        const sId = m.senderId?._id || m.senderId;
+        const isMe = sId === myId;
+        let replyTo: Msg["replyTo"] | undefined;
+        if (m.replyTo) {
+          const rtId = m.replyTo.senderId?._id || m.replyTo.senderId;
+          replyTo = { id: m.replyTo._id, senderId: rtId === myId ? "me" : "other", text: m.replyTo.text || "Voice message" };
+        }
+        return {
+          id: m._id, senderId: isMe ? "me" : "other",
+          sender: m.senderId,
+          text: m.text,
+          timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          status: isMe ? (m.tickStatus ?? "sent") : undefined,
+          readBy: m.readBy || [],
+          reactions: m.reactions || [],
+          ...(replyTo ? { replyTo } : {}),
+          ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+          isSystem: m.isSystem,
+          isEdited: m.isEdited,
+          createdAt: m.createdAt,
+        };
+      });
+
+      if (mapped.length > 0) {
+        setMessages(prev => [...mapped, ...prev]);
+        
+        // Restore scroll position
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight - oldScrollHeight;
+          }
+        }, 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch more messages", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, currentChat, messages, user]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (currentChat?._id) {
+        api.post(`/messages/read/${currentChat._id}`).catch(() => { });
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [currentChat?._id, queryClient]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -282,7 +351,12 @@ const ChatPage = () => {
     isAtBottomRef.current = atBottom;
     setIsAtBottom(atBottom);
     if (atBottom) setUnreadWhileAway(0);
-  }, []);
+
+    // If reached top, load more
+    if (el.scrollTop < 100 && !loadingMore && hasMore) {
+      fetchMoreMessages();
+    }
+  }, [loadingMore, hasMore, fetchMoreMessages]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -538,6 +612,11 @@ const ChatPage = () => {
         });
         prevMsgCountRef.current = mapped.length;
         setMessages(mapped);
+        setHasMore(mapped.length >= 30);
+        
+        // Scroll to bottom on initial load
+        setTimeout(() => scrollToBottom("auto"), 100);
+
         const hasUnreadFromOthers = mapped.some(m => m.senderId === "other" && !m.readBy?.some(u => (u?._id || u) === myId));
         if (hasUnreadFromOthers) {
           await api.post(`/messages/read/${chatData._id}`).catch(() => { });
@@ -630,21 +709,19 @@ const ChatPage = () => {
 
       setMessages(p => p.map(m => {
         const isMyMsg = m.senderId === "me";
+        const currentRB = m.readBy || [];
+        const alreadyRead = currentRB.some(ru => (ru?._id?.toString() || ru.toString()) === rId);
 
-        if (isGroup && rId && rId !== user?._id) {
-          const currentRB = m.readBy || [];
-          const alreadyRead = currentRB.some(ru => (ru._id?.toString() || ru.toString()) === rId);
-          if (!alreadyRead) {
-            const userObj = readByUser || groupData?.participants?.find((x: any) => x._id === rId) || { _id: rId, name: "Someone", avatar: "" };
-            return {
-              ...m,
-              readBy: [...currentRB, userObj],
-              status: isMyMsg ? "seen" : m.status
-            };
-          }
+        if (rId && rId !== user?._id && !alreadyRead) {
+          const userObj = readByUser || groupData?.participants?.find((x: any) => x._id === rId) || { _id: rId, name: "Someone", avatar: "" };
+          return {
+            ...m,
+            readBy: [...currentRB, userObj],
+            status: isMyMsg ? "seen" : m.status
+          };
         }
 
-        return isMyMsg ? { ...m, status: "seen" } : m;
+        return isMyMsg && rId && rId !== user?._id ? { ...m, status: "seen" } : m;
       }));
 
       queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -747,25 +824,12 @@ const ChatPage = () => {
   }, [messages]);
 
   useEffect(() => {
-    setHasScrolledOnLoad(false);
-  }, [currentChat?._id]);
-
-  useEffect(() => {
-    if (messages.length > 0 && !hasScrolledOnLoad) {
-      // Use a small timeout to ensure DOM is ready
-      setTimeout(() => {
-        scrollToBottom("instant" as ScrollBehavior);
-        setHasScrolledOnLoad(true);
-      }, 100);
-    }
-  }, [messages, hasScrolledOnLoad]);
-
-  useEffect(() => {
     if (messages.length > 0 && currentChat) {
       // Just a safety scroll on chat change
       scrollToBottom("instant" as ScrollBehavior);
     }
   }, [currentChat?._id]);
+
 
   useEffect(() => () => {
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -1164,9 +1228,15 @@ const ChatPage = () => {
 
         {/* Messages */}
         <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+          {loadingMore && (
+            <div className="flex justify-center py-4">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
           {messages.map((msg, index) => {
             const isMe = msg.senderId === "me";
             const isLastInGroup = !messages[index + 1] || messages[index + 1].senderId !== msg.senderId;
+            const isFirstInGroup = !messages[index - 1] || messages[index - 1].senderId !== msg.senderId;
             const isLastMyMsg = index === lastSeenIdx;
             const isCurrentHit = searchResults[searchIdx]?._id === msg.id;
 
@@ -1203,7 +1273,7 @@ const ChatPage = () => {
                   onTouchStart={e => startLongPress(msg, e)}
                   onTouchEnd={cancelLongPress} onTouchMove={e => moveLongPress(e)}>
                   <SwipeRow
-                    msg={{ ...msg, readBy: effectiveReadBy as any }} isMe={isMe} isLast={isLastInGroup} isLastMyMsg={isLastMyMsg}
+                    msg={{ ...msg, readBy: effectiveReadBy as any }} isMe={isMe} isLast={isLastInGroup} isFirst={isFirstInGroup} isLastMyMsg={isLastMyMsg}
                     onReply={setReplyingTo} chatUser={chatUser}
                     playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
                     onImageTap={openLightbox} onReact={handleReact}
@@ -1338,18 +1408,29 @@ const ChatPage = () => {
                     </button>
                   </div>
                 )}
-                <div className={`flex items-center gap-2 px-4 py-2.5 ${replyingTo ? "pt-1.5" : ""}`}>
-                  <input
-                    ref={inputRef}
+                <div className={`flex items-center gap-2 px-4 py-2 ${replyingTo ? "pt-1" : "pt-2.5"}`}>
+                  <textarea
+                    ref={inputRef as any}
+                    rows={1}
                     value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={e => e.key === "Enter" && sendMessage()}
-                    placeholder="Type here"
-                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1"
+                    onChange={(e) => {
+                      handleInputChange(e as any);
+                      e.target.style.height = "inherit";
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                        (e.target as HTMLTextAreaElement).style.height = "inherit";
+                      }
+                    }}
+                    placeholder="Type a message"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-1 resize-none max-h-[120px] transition-all"
                   />
                   {hasContent
-                    ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors"><FiSend size={20} /></button>
-                    : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors -mr-1"><FiCamera size={20} /></button>
+                    ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"><FiSend size={20} /></button>
+                    : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors p-2 shrink-0"><FiCamera size={20} /></button>
                   }
                 </div>
               </div>

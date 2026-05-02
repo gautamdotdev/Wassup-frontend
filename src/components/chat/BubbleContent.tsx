@@ -10,14 +10,14 @@ import { MediaRenderer } from "./MediaRenderer";
  * - Other themes:  my bubbles use theme color, received stays neutral
  */
 export function BubbleContent({
-  msg, isMe, isLast, chatUser, playingVoice, setPlayingVoice, onImageTap,
+  msg, isMe, isLast, isFirst, chatUser, playingVoice, setPlayingVoice, onImageTap,
   themeBubbleBg, themeBubbleText,
   themeOtherBubbleBg, themeOtherBubbleText,
   MediaRenderer,
   isGroup = false,
   highlightText = "",
 }: {
-  msg: Msg; isMe: boolean; isLast: boolean; chatUser?: any;
+  msg: Msg; isMe: boolean; isLast: boolean; isFirst: boolean; chatUser?: any;
   playingVoice: string | null; setPlayingVoice: (id: string | null) => void;
   onImageTap: (images: string[], startIndex: number) => void;
   themeBubbleBg?: string;
@@ -41,8 +41,8 @@ export function BubbleContent({
   const textClass = hasTheme ? "" : "text-foreground";
   const textStyle = hasTheme ? { color: activeText } : {};
 
-  const radiusClass = isLast
-    ? (isMe ? "rounded-[22px] rounded-br-[5px]" : "rounded-[22px] rounded-bl-[5px]")
+  const radiusClass = isFirst
+    ? (isMe ? "rounded-[22px] rounded-tr-[5px]" : "rounded-[22px] rounded-tl-[5px]")
     : "rounded-[22px]";
 
   const replyLabel = (senderId: string) => {

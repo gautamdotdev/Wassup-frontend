@@ -32,6 +32,16 @@ const MessengersPage = () => {
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
+    }, 300);
+  };
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [filters, setFilters] = useState<FilterTab[]>(DEFAULT_FILTERS);
@@ -194,12 +204,14 @@ const MessengersPage = () => {
 
   /* filter logic */
   const filteredChats = chats.filter((chat: any) => {
-    const otherUser = chat.participants.find((p: any) => p._id !== user?._id);
-    if (!otherUser) return false;
-    if (searchQuery) {
+    const isGroup = chat.chatType === "group";
+    const otherUser = isGroup ? null : chat.participants.find((p: any) => p._id !== user?._id);
+    const chatName = isGroup ? chat.chatName : otherUser?.name || "Unknown";
+
+    if (debouncedSearch) {
       return (
-        otherUser?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.latestMessage?.text?.toLowerCase().includes(searchQuery.toLowerCase())
+        chatName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        chat.latestMessage?.text?.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
     if (activeFilter === "Favorites") return !!chat.isFavorite;
@@ -432,7 +444,7 @@ const MessengersPage = () => {
                 <button onClick={() => !isSearching && setIsSearching(true)} className="w-10 h-10 shrink-0 flex items-center justify-center z-10" style={{ cursor: isSearching ? "default" : "pointer" }}>
                   <FiSearch size={isSearching ? 18 : 20} className={`transition-all duration-300 ${isSearching ? "text-muted-foreground mr-1" : "text-foreground"}`} />
                 </button>
-                <input ref={searchInputRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search chats..."
+                <input ref={searchInputRef} value={searchQuery} onChange={e => handleSearchChange(e.target.value)} placeholder="Search chats..."
                   className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none absolute left-10 right-10 top-0 bottom-0 pr-2"
                   style={{ display: "none", opacity: 0 }} />
                 <button ref={closeBtnRef} onClick={e => { e.stopPropagation(); setIsSearching(false); setSearchQuery(""); }}
@@ -530,12 +542,13 @@ const MessengersPage = () => {
               const chatAvatar = isGroup ? (chat.avatar || 'https://i.pravatar.cc/150?u=group') : otherUser.avatar;
 
               const latestMsg = chat.latestMessage;
+              const status = latestMsg?.tickStatus || "sent";
               const latestSenderId = latestMsg?.senderId?._id || latestMsg?.senderId;
               const isMine = latestSenderId === user?._id;
               const unreadCount: number = chat.unreadCount ?? 0;
               const isUnread = unreadCount > 0;
-              const tickSeen = isMine && (isGroup ? (latestMsg?.readBy?.length > 1) : (latestMsg?.readBy?.length > 1));
-              const tickDelivered = isMine && !tickSeen && (latestMsg?.readBy?.length >= 1);
+              const tickSeen = isMine && status === "seen";
+              const tickDelivered = isMine && (status === "delivered" || status === "seen");
               let timeLabel = "";
               if (latestMsg?.createdAt) {
                 timeLabel = formatDistanceToNow(new Date(latestMsg.createdAt), { addSuffix: true }).replace("about ", "");
