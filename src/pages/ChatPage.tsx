@@ -1474,20 +1474,29 @@ const ChatPage = () => {
                     ref={inputRef as any}
                     rows={1}
                     value={input}
+                    onFocus={() => {
+                      // Smooth scroll to bottom when keyboard opens
+                      setTimeout(() => {
+                        scrollToBottom("smooth");
+                      }, 350);
+                    }}
                     onChange={(e) => {
                       handleInputChange(e as any);
-                      e.target.style.height = "inherit";
-                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = "auto";
+                      const newHeight = Math.min(target.scrollHeight, 120);
+                      target.style.height = `${newHeight}px`;
                     }}
                     onKeyDown={e => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         sendMessage();
-                        (e.target as HTMLTextAreaElement).style.height = "inherit";
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
                       }
                     }}
                     placeholder="Type a message"
-                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-1 resize-none max-h-[120px] transition-all"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-1 resize-none max-h-[120px] transition-all scrollbar-none"
                   />
                   {hasContent
                     ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"><FiSend size={20} /></button>
