@@ -118,18 +118,30 @@ export function SwipeRow({
 
       {/* Bubble row */}
       <div
-        className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+        className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
         style={{
           transform: `translateX(${isMe ? -offsetX : offsetX}px)`,
           transition: dragging ? "none" : "transform 0.28s cubic-bezier(0.34,1.56,0.64,1)",
         }}
       >
+        {/* Left-side avatar for incoming messages */}
+        {!isMe && (
+          <div className="w-7 shrink-0 mb-1">
+            {isLast && (
+              <img
+                src={msg.sender?.avatar || chatUser?.avatar || 'https://i.pravatar.cc/150'}
+                className="w-7 h-7 rounded-full object-cover border border-border/10 shadow-sm animate-in fade-in zoom-in-75 duration-300"
+                alt=""
+              />
+            )}
+          </div>
+        )}
+
         <div className="max-w-[82%]">
-          {/* Sender label for groups */}
-          {!isMe && isGroup && (
-            <div className="flex items-center gap-1.5 ml-1 mb-1 animate-in fade-in slide-in-from-left-2 duration-300">
-               <img src={msg.sender?.avatar || 'https://i.pravatar.cc/150'} className="w-5 h-5 rounded-full object-cover border border-border/20 shadow-sm" alt="" />
-               <span className="text-[10px] font-bold text-primary/80 tracking-tight uppercase">{msg.sender?.name}</span>
+          {/* Sender name for groups (small text above) */}
+          {!isMe && isGroup && isFirst && (
+            <div className="ml-1 mb-0.5 animate-in fade-in slide-in-from-left-1 duration-300">
+              <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tight uppercase">{msg.sender?.name || "Unknown"}</span>
             </div>
           )}
 
