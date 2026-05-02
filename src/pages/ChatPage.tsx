@@ -220,6 +220,12 @@ const ChatPage = () => {
     if (!vv) return;
     const updateHeight = () => {
       document.documentElement.style.setProperty('--vh', `${vv.height}px`);
+      // If user was at bottom, stay at bottom during resize (keyboard open/close)
+      if (isAtBottomRef.current) {
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+        }, 100);
+      }
     };
     vv.addEventListener('resize', updateHeight);
     vv.addEventListener('scroll', updateHeight);
@@ -1285,9 +1291,12 @@ const ChatPage = () => {
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col">
           {/* Top Sentinel for Infinite Scroll */}
-          <div ref={topSentinelRef} className="h-1 w-full" />
+          <div ref={topSentinelRef} className="h-1 w-full shrink-0" />
+
+          {/* Spacer to push messages to bottom when list is short */}
+          <div className="flex-1" />
 
           {loadingMore && (
             <div className="flex justify-center py-4">
