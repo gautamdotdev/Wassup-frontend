@@ -72,16 +72,23 @@ export function SwipeRow({
     const raw = isMe ? -dx : dx;
     if (Math.abs(dx) > 8) swipeActive.current = true;
     if (raw > 0 && swipeActive.current) {
-      const c = Math.min(raw, SWIPE_THRESHOLD + 16);
+      const c = Math.min(raw, SWIPE_THRESHOLD + 20);
       setOffsetX(c);
       if (c >= SWIPE_THRESHOLD && !fired.current) {
         fired.current = true;
-        onReply(msg);
+        // Optional: window.navigator.vibrate?.(10); 
       }
     }
   };
 
-  const onTouchEnd = () => { setDragging(false); setOffsetX(0); };
+  const onTouchEnd = () => {
+    if (fired.current) {
+      onReply(msg);
+    }
+    setDragging(false);
+    setOffsetX(0);
+    fired.current = false;
+  };
 
   const handleReact = useCallback((emoji: string) => {
     if (typeof onReact === "function") onReact(msg.id, emoji);

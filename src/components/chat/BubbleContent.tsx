@@ -131,7 +131,14 @@ export function BubbleContent({
       {msg.replyTo && (
         <button
           className={`px-3 pt-3 pb-2 w-full text-left rounded-t-[22px] ${hasTheme ? "bg-black/15" : "bg-black/[0.04] dark:bg-white/[0.04]"}`}
-          onClick={() => document.getElementById(`msg-${msg.replyTo!.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          onClick={() => {
+            const target = document.getElementById(`msg-${msg.replyTo!.id}`);
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "center" });
+              target.classList.add("msg-highlight");
+              setTimeout(() => target.classList.remove("msg-highlight"), 1500);
+            }
+          }}
         >
           <p className={`text-[11px] font-semibold mb-1.5`}
             style={{ color: hasTheme ? "rgba(255,255,255,0.65)" : "hsl(var(--muted-foreground))" }}>
