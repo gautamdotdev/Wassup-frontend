@@ -163,8 +163,10 @@ const ChatPage = () => {
   const isDark = useIsDark();
 
   /* refs */
-  const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const hasScrolledOnLoadRef = useRef(false);
+  const isAtBottomRef = useRef(true);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatUserIdRef = useRef<string | null>(null);
@@ -173,7 +175,7 @@ const ChatPage = () => {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isAtBottomRef = useRef(true);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
   const prevMsgCountRef = useRef(0);
   const lpStartX = useRef(0);
   const lpStartY = useRef(0);
@@ -221,12 +223,13 @@ const ChatPage = () => {
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(true);
   const [editingMsg, setEditingMsg] = useState<Msg | null>(null);
 
   const fetchMoreMessages = useCallback(async () => {
     if (loadingMore || !hasMore || !currentChat || messages.length === 0) return;
     setLoadingMore(true);
-    
+
     // Save current scroll height to restore later
     const oldScrollHeight = scrollRef.current?.scrollHeight || 0;
 
@@ -264,15 +267,24 @@ const ChatPage = () => {
       });
 
       if (mapped.length > 0) {
-        setMessages(prev => [...mapped, ...prev]);
-        
+        setMessages(prev => {
+          const ids = new Set(prev.map(m => m.id));
+          const filtered = mapped.filter(m => !ids.has(m.id));
+          if (filtered.length === 0) return prev;
+          const next = [...filtered, ...prev];
+          prevMsgCountRef.current = next.length;
+          return next;
+        });
+
         // Restore scroll position
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight - oldScrollHeight;
           }
-        }, 0);
+        }, 50);
       }
+      // Cooldown to prevent rapid loops
+      await new Promise(r => setTimeout(r, 400));
     } catch (err) {
       console.error("Failed to fetch more messages", err);
     } finally {
@@ -344,19 +356,28 @@ const ChatPage = () => {
     return () => document.removeEventListener("contextmenu", block);
   }, []);
 
+  useEffect(() => {
+    if (!topSentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && hasMore && messages.length > 0) {
+          fetchMoreMessages();
+        }
+      },
+      { threshold: 0, rootMargin: "150px 0px 0px 0px" }
+    );
+    observer.observe(topSentinelRef.current);
+    return () => observer.disconnect();
+  }, [loadingMore, hasMore, fetchMoreMessages, messages.length]);
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     isAtBottomRef.current = atBottom;
     setIsAtBottom(atBottom);
     if (atBottom) setUnreadWhileAway(0);
-
-    // If reached top, load more
-    if (el.scrollTop < 100 && !loadingMore && hasMore) {
-      fetchMoreMessages();
-    }
-  }, [loadingMore, hasMore, fetchMoreMessages]);
+  }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -454,10 +475,10 @@ const ChatPage = () => {
     } catch { toast.error("Failed to update notifications"); }
     setShowMenu(false);
   };
-   const handleMediaFiles = () => { 
+  const handleMediaFiles = () => {
     const path = isGroup ? `/chat/group/${userId}/media` : `/chat/${userId}/media`;
-    navigate(path); 
-    setShowMenu(false); 
+    navigate(path);
+    setShowMenu(false);
   };
   const handleChatTheme = () => { setShowThemePicker(true); setShowMenu(false); };
 
@@ -525,9 +546,9 @@ const ChatPage = () => {
       setMessages(p => p.filter(m => m.id !== msg.id));
     }
     try {
-      await api.delete(`/messages/${msg.id}`, { 
+      await api.delete(`/messages/${msg.id}`, {
         params: { deleteForEveryone: forEveryone },
-        data: { deleteForEveryone: forEveryone } 
+        data: { deleteForEveryone: forEveryone }
       });
       if (!forEveryone) {
         queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -610,26 +631,39 @@ const ChatPage = () => {
             createdAt: m.createdAt,
           };
         });
-        prevMsgCountRef.current = mapped.length;
         setMessages(mapped);
+        prevMsgCountRef.current = mapped.length;
         setHasMore(mapped.length >= 30);
-        
-        // Scroll to bottom on initial load
-        setTimeout(() => scrollToBottom("auto"), 100);
 
-        const hasUnreadFromOthers = mapped.some(m => m.senderId === "other" && !m.readBy?.some(u => (u?._id || u) === myId));
+        // Scroll to bottom on initial load
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, 150);
+
+        const hasUnreadFromOthers = mapped.some(m => m.senderId === "other" && !m.readBy?.some(u => (u?._id || u).toString() === myId));
         if (hasUnreadFromOthers) {
           await api.post(`/messages/read/${chatData._id}`).catch(() => { });
         }
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err: any) {
         if (err.response?.status === 403) { toast.error("Must connect before chatting"); navigate("/search"); }
-        else console.error("Failed to load chat", err);
+        else {
+          console.error("Failed to load chat", err);
+          toast.error("Failed to load chat. Please try again.");
+        }
+      } finally {
+        if (active) setLoadingChat(false);
       }
     };
-    if (userId) load();
+    if (userId) {
+      setLoadingChat(true);
+      hasScrolledOnLoadRef.current = false;
+      load();
+    }
     return () => { active = false; };
-  }, [userId, user]);
+  }, [userId, user, location.pathname]);
 
   useEffect(() => {
     if (!socket) return;
@@ -818,17 +852,26 @@ const ChatPage = () => {
   }, [socket, currentChat, user, queryClient]);
 
   useEffect(() => {
-    const isNew = messages.length > prevMsgCountRef.current;
-    prevMsgCountRef.current = messages.length;
-    if (isNew && isAtBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messages.length === 0) return;
 
-  useEffect(() => {
-    if (messages.length > 0 && currentChat) {
-      // Just a safety scroll on chat change
+    const isNew = messages.length > prevMsgCountRef.current;
+
+    // Initial scroll
+    if (!hasScrolledOnLoadRef.current) {
       scrollToBottom("instant" as ScrollBehavior);
+      hasScrolledOnLoadRef.current = true;
+      prevMsgCountRef.current = messages.length;
+      return;
     }
-  }, [currentChat?._id]);
+
+    // Auto-scroll for new messages if at bottom
+    if (isNew) {
+      if (isAtBottomRef.current) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+      prevMsgCountRef.current = messages.length;
+    }
+  }, [messages]);
 
 
   useEffect(() => () => {
@@ -1228,6 +1271,9 @@ const ChatPage = () => {
 
         {/* Messages */}
         <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+          {/* Top Sentinel for Infinite Scroll */}
+          <div ref={topSentinelRef} className="h-1 w-full" />
+
           {loadingMore && (
             <div className="flex justify-center py-4">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
