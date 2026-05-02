@@ -1407,7 +1407,7 @@ const ChatPage = () => {
 
         {/* Bottom bar */}
         <div
-          className={`relative z-[50] sticky bottom-0 shrink-0 pb-6 pt-4 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          className={`relative z-[50] sticky bottom-0 shrink-0 pb-2 pt-2 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
           style={!isDefault ? bottomGradientStyle : undefined}
         >
           {/* Pending images strip */}
