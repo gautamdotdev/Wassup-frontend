@@ -214,6 +214,21 @@ const ChatPage = () => {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockUnlocked, setLockUnlocked] = useState(false);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const updateHeight = () => {
+      document.documentElement.style.setProperty('--vh', `${vv.height}px`);
+    };
+    vv.addEventListener('resize', updateHeight);
+    vv.addEventListener('scroll', updateHeight);
+    updateHeight();
+    return () => {
+      vv.removeEventListener('resize', updateHeight);
+      vv.removeEventListener('scroll', updateHeight);
+    };
+  }, []);
   const [showLockScreen, setShowLockScreen] = useState<"verify" | "set" | null>(null);
   const [msgInfoOpen, setMsgInfoOpen] = useState<Msg | null>(null);
   const { quickReactions, replaceReaction } = useQuickReactions();
@@ -1139,15 +1154,15 @@ const ChatPage = () => {
 
       {/* ── Main chat layout ── */}
       <div
-        className={`${!isDefault ? "dark " : ""}min-h-screen flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 ${isDefault ? "bg-background" : ""}`}
-        style={chatContainerStyle}
+        className={`${!isDefault ? "dark " : ""}flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 overflow-hidden ${isDefault ? "bg-background" : ""}`}
+        style={{ ...chatContainerStyle, height: 'var(--vh, 100dvh)' }}
       >
         {/* Animated background layer (fixed, behind content) */}
         {!isDefault && <ChatAnimatedBg key={chatTheme} themeId={chatTheme} />}
 
         {/* Header */}
         <div
-          className={`sticky top-0 z-[60] backdrop-blur-md transition-colors duration-300 ${isDefault ? "bg-background/80" : ""}`}
+          className={`sticky top-0 z-[60] shrink-0 backdrop-blur-md transition-colors duration-300 ${isDefault ? "bg-background/80" : ""}`}
           style={!isDefault ? headerBgStyle : undefined}
         >
           {!searchOpen ? (
@@ -1383,7 +1398,7 @@ const ChatPage = () => {
 
         {/* Bottom bar */}
         <div
-          className={`relative z-[50] sticky bottom-0 pb-6 pt-4 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          className={`relative z-[50] sticky bottom-0 shrink-0 pb-6 pt-4 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
           style={!isDefault ? bottomGradientStyle : undefined}
         >
           {/* Pending images strip */}
