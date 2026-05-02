@@ -226,8 +226,8 @@ const ChatPage = () => {
       
       if (isAtBottomRef.current) {
         setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
-        }, 50);
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
       }
     };
     vv.addEventListener('resize', updateLayout);
@@ -1164,7 +1164,12 @@ const ChatPage = () => {
       {/* ── Main chat layout ── */}
       <div
         className={`${!isDefault ? "dark " : ""}flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 overflow-hidden ${isDefault ? "bg-background" : ""}`}
-        style={{ ...chatContainerStyle, height: 'var(--vh, 100dvh)', top: 'var(--vv-top, 0)' }}
+        style={{ 
+          ...chatContainerStyle, 
+          height: 'var(--vh, 100dvh)', 
+          top: 'var(--vv-top, 0)',
+          transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease'
+        }}
       >
         {/* Animated background layer (fixed, behind content) */}
         {!isDefault && <ChatAnimatedBg key={chatTheme} themeId={chatTheme} />}
