@@ -83,7 +83,7 @@
     @apply border-border;
     -webkit-tap-highlight-color: transparent;
   }
-  body {
+  html, body {
     @apply bg-background text-foreground;
     font-family: var(--app-font-family);
     letter-spacing: var(--app-letter-spacing);
@@ -92,6 +92,11 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     overflow: hidden;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
     overscroll-behavior: none;
     text-rendering: optimizeLegibility;
   }

@@ -218,21 +218,24 @@ const ChatPage = () => {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const updateHeight = () => {
+    const updateLayout = () => {
+      // Force window to top to prevent browser auto-scroll from hiding the header
+      window.scrollTo(0, 0);
       document.documentElement.style.setProperty('--vh', `${vv.height}px`);
-      // If user was at bottom, stay at bottom during resize (keyboard open/close)
+      document.documentElement.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+      
       if (isAtBottomRef.current) {
         setTimeout(() => {
           bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
-        }, 100);
+        }, 50);
       }
     };
-    vv.addEventListener('resize', updateHeight);
-    vv.addEventListener('scroll', updateHeight);
-    updateHeight();
+    vv.addEventListener('resize', updateLayout);
+    vv.addEventListener('scroll', updateLayout);
+    updateLayout();
     return () => {
-      vv.removeEventListener('resize', updateHeight);
-      vv.removeEventListener('scroll', updateHeight);
+      vv.removeEventListener('resize', updateLayout);
+      vv.removeEventListener('scroll', updateLayout);
     };
   }, []);
   const [showLockScreen, setShowLockScreen] = useState<"verify" | "set" | null>(null);
@@ -1161,7 +1164,7 @@ const ChatPage = () => {
       {/* ── Main chat layout ── */}
       <div
         className={`${!isDefault ? "dark " : ""}flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 overflow-hidden ${isDefault ? "bg-background" : ""}`}
-        style={{ ...chatContainerStyle, height: 'var(--vh, 100dvh)' }}
+        style={{ ...chatContainerStyle, height: 'var(--vh, 100dvh)', top: 'var(--vv-top, 0)' }}
       >
         {/* Animated background layer (fixed, behind content) */}
         {!isDefault && <ChatAnimatedBg key={chatTheme} themeId={chatTheme} />}
