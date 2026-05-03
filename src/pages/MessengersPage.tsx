@@ -81,8 +81,10 @@ const MessengersPage = () => {
 
   const dropdownBg = {
     background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+    border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)",
+    boxShadow: isDark 
+      ? "0 4px 20px rgba(0,0,0,0.4)" 
+      : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
   const { data: chats = [], isLoading } = useQuery({
@@ -293,7 +295,7 @@ const MessengersPage = () => {
       {/* ── Long-press context menu ── */}
       {chatMenu && (
         <div className="fixed inset-0 z-[60]"
-          style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(2px)" }}
+          style={{ background: "transparent", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setChatMenu(null)} onTouchStart={() => setChatMenu(null)}>
           <div ref={chatMenuRef} className="fixed rounded-2xl overflow-hidden"
             style={{ ...dropdownBg, ...getMenuStyle(), animation: "msgMenuIn 0.18s cubic-bezier(0.34,1.4,0.64,1) both", width: 220 }}
@@ -314,13 +316,13 @@ const MessengersPage = () => {
       {/* ── Filter modal ── */}
       {showFilterModal && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center"
-          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
+          style={{ background: "transparent", backdropFilter: "blur(4px)" }}
           onClick={() => setShowFilterModal(false)}>
           <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
             style={{
               background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
               border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-              boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
+              boxShadow: isDark ? "0 -10px 40px rgba(0,0,0,0.3)" : "0 -10px 40px rgba(0,0,0,0.06)",
               animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
             }}
             onClick={e => e.stopPropagation()}>

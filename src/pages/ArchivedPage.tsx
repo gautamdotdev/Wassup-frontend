@@ -58,8 +58,10 @@ const ArchivedPage = () => {
                 <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
                   style={{
                     background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-                    border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+                    border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)",
+                    boxShadow: isDark 
+                      ? "0 4px 20px rgba(0,0,0,0.4)" 
+                      : "0 4px 20px rgba(0,0,0,0.08)",
                     animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both",
                     transformOrigin: "top right"
                   }}>

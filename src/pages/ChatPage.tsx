@@ -362,25 +362,33 @@ const ChatPage = () => {
   const sheetBg = {
     background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
     border: isEffectiveDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-    boxShadow: "0 -20px 60px rgba(0,0,0,0.45)",
+    boxShadow: isEffectiveDark ? "0 -10px 40px rgba(0,0,0,0.3)" : "0 -10px 40px rgba(0,0,0,0.06)",
     animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
   };
 
-  const dropdownBg = isDefault
+  const msgMenuBg = isDefault
     ? {
         background: isDark ? "rgba(28,28,28,0.85)" : "rgba(255,255,255,0.92)",
         backdropFilter: "blur(32px) saturate(180%)",
         WebkitBackdropFilter: "blur(32px) saturate(180%)",
         border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
-        boxShadow: "0 12px 48px -12px rgba(0,0,0,0.5)",
+        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.3)",
       }
     : {
         background: `${themeDef.hex}F2`,
         backdropFilter: "blur(30px) saturate(180%)",
         WebkitBackdropFilter: "blur(30px) saturate(180%)",
         border: "1px solid rgba(255,255,255,0.2)",
-        boxShadow: "0 12px 48px -12px rgba(0,0,0,0.4)",
+        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.25)",
       };
+
+  const dropdownBg = {
+    background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
+    border: isEffectiveDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)",
+    boxShadow: isEffectiveDark 
+      ? "0 4px 20px rgba(0,0,0,0.4)" 
+      : "0 4px 20px rgba(0,0,0,0.08)",
+  };
 
   const menuTextClass = !isDefault ? "text-white" : "text-foreground";
   const menuMutedClass = !isDefault ? "text-white/60" : "text-muted-foreground";
@@ -1100,7 +1108,7 @@ const ChatPage = () => {
       {/* Message info sheet */}
       {msgInfoOpen && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center"
-          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)" }}
+          style={{ background: "transparent", backdropFilter: "blur(4px)" }}
           onClick={() => setMsgInfoOpen(null)}>
           <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
             style={sheetBg} onClick={e => e.stopPropagation()}>
@@ -1135,10 +1143,10 @@ const ChatPage = () => {
 
       {/* Message context menu */}
       {msgMenu && (
-        <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+        <div className="fixed inset-0 z-[60]" style={{ background: "transparent", backdropFilter: "blur(2px)" }}
           onMouseDown={() => setMsgMenu(null)} onTouchStart={() => setMsgMenu(null)}>
           <div ref={msgMenuRef} className="fixed rounded-[24px] overflow-hidden"
-            style={{ ...dropdownBg, ...getMsgMenuStyle(), animation: "msgMenuIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both", width: 250 }}
+            style={{ ...msgMenuBg, ...getMsgMenuStyle(), animation: "msgMenuIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both", width: 250 }}
             onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
             <div className={`flex items-center justify-around px-2 py-3 border-b ${menuBorderClass}`}>
               {quickReactions.map((e, idx) => (
