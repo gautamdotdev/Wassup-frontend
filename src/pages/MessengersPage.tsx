@@ -84,8 +84,8 @@ const MessengersPage = () => {
   const dropdownBg = {
     background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
     border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)",
-    boxShadow: isDark 
-      ? "0 4px 20px rgba(0,0,0,0.4)" 
+    boxShadow: isDark
+      ? "0 4px 20px rgba(0,0,0,0.4)"
       : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
@@ -201,9 +201,11 @@ const MessengersPage = () => {
       gsap.set([searchInputRef.current, closeBtnRef.current], { display: "block" });
       gsap.to([searchInputRef.current, closeBtnRef.current], { opacity: 1, duration: 0.2, delay: 0.22 });
     } else {
-      gsap.to([searchInputRef.current, closeBtnRef.current], { opacity: 0, duration: 0.15, onComplete: () => {
-        if (searchInputRef.current) gsap.set([searchInputRef.current, closeBtnRef.current], { display: "none" });
-      }});
+      gsap.to([searchInputRef.current, closeBtnRef.current], {
+        opacity: 0, duration: 0.15, onComplete: () => {
+          if (searchInputRef.current) gsap.set([searchInputRef.current, closeBtnRef.current], { display: "none" });
+        }
+      });
       gsap.to(searchContainerRef.current, { width: "40px", duration: 0.35, ease: "expo.inOut", delay: 0.08 });
       gsap.to(titleRef.current, { opacity: 1, x: 0, duration: 0.28, ease: "expo.out", delay: 0.18 });
       if (moreBtnRef.current) gsap.to(moreBtnRef.current, { width: "40px", opacity: 1, marginLeft: 8, duration: 0.28, ease: "expo.out", delay: 0.18 });
@@ -613,7 +615,7 @@ const MessengersPage = () => {
               const chatName = isGroup ? chat.chatName : otherUser.name;
               const chatAvatar = isGroup ? (chat.avatar || 'https://i.pravatar.cc/150?u=group') : otherUser.avatar;
 
-              const latestMsg = chat.latestMessage;
+              const latestMsg = chat.latestMessage || chat.lastMessage;
               const status = latestMsg?.tickStatus || "sent";
               const latestSenderId = latestMsg?.senderId?._id || latestMsg?.senderId;
               const isMine = latestSenderId === user?._id;
@@ -665,7 +667,7 @@ const MessengersPage = () => {
                           : tickDelivered
                             ? <BsCheckAll size={18} className="text-muted-foreground shrink-0" />
                             : <BsCheck size={18} className="text-muted-foreground shrink-0" />)}
-                        
+
                         <p className={`text-[14px] truncate flex items-center gap-1 ${typingStates[chat._id] ? "text-green-500 font-bold" : isUnread ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
                           {typingStates[chat._id] ? (
                             <>
@@ -678,10 +680,10 @@ const MessengersPage = () => {
                             </>
                           ) : latestMsg ? (
                             <>
-                              {isGroup && latestMsg.senderId?._id !== user?._id && <span className="text-primary/70 font-bold mr-1">{latestMsg.senderId?.name}:</span>}
-                              {latestMsg.text || "📷 Photo"}
+                              {isGroup && latestMsg.senderId?._id !== user?._id && <span className="text-primary/70 font-bold mr-1">{latestMsg.senderId?.name || "Member"}:</span>}
+                              {latestMsg.text || latestMsg.content || latestMsg.message || (latestMsg.images?.length ? "📷 Photo" : latestMsg.files?.length ? "📁 File" : "New message")}
                             </>
-                          ) : "Say hi!"}
+                          ) : "No messages yet"}
                         </p>
                       </div>
                       {isUnread && !selecting && (
