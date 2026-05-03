@@ -1410,7 +1410,7 @@ const ChatPage = () => {
 
         {/* Bottom bar */}
         <div
-          className={`relative z-[50] sticky bottom-0 shrink-0 pb-0 pt-2 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
+          className={`relative z-[50] sticky bottom-0 shrink-0 pb-4 pt-2 px-4 flex flex-col justify-end ${isDefault ? "bg-gradient-to-t from-background via-background/90 to-transparent" : ""}`}
           style={!isDefault ? bottomGradientStyle : undefined}
         >
           {/* Pending images strip */}
@@ -1439,12 +1439,12 @@ const ChatPage = () => {
           ) : (
             <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
               <button onClick={() => setShowAttachPanel(true)}
-                className="text-foreground w-11 h-11 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                className="text-foreground w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
                 style={inputPillStyle}>
                 <FiPlus size={24} />
               </button>
               <div
-                className="flex-1 flex flex-col overflow-hidden transition-all duration-300 rounded-[28px]"
+                className="flex-1 flex flex-col justify-center overflow-hidden transition-all duration-300 rounded-[28px] min-h-[46px]"
                 style={inputPillStyle}
               >
                 {editingMsg && (
@@ -1481,7 +1481,7 @@ const ChatPage = () => {
                     </button>
                   </div>
                 )}
-                <div className={`flex items-center gap-2 px-4 py-2 ${replyingTo ? "pt-1" : "pt-2.5"}`}>
+                <div className={`flex items-center gap-2 px-3 py-0 ${replyingTo ? "pt-0" : "pt-0"}`}>
                   <textarea
                     ref={inputRef as any}
                     rows={1}
@@ -1505,7 +1505,7 @@ const ChatPage = () => {
                       }
                     }}
                     placeholder="Type a message"
-                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-1 resize-none max-h-[120px] transition-all scrollbar-none"
+                    className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-[11px] resize-none max-h-[120px] transition-all scrollbar-none"
                   />
                   {hasContent
                     ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"><FiSend size={20} /></button>
