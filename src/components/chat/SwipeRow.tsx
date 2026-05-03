@@ -10,7 +10,7 @@ const SWIPE_THRESHOLD = 50;
  * Modular Swipe Indicator Component 
  * Displays an arrow and a progress ring that fills up as the user swipes.
  */
-const SwipeIndicator = ({ progress, isMe, fired }: { progress: number; isMe: boolean; fired: boolean }) => {
+const SwipeIndicator = ({ progress, fired }: { progress: number; isMe: boolean; fired: boolean }) => {
   const size = 32;
   const stroke = 2.5;
   const radius = (size - stroke) / 2;
@@ -18,34 +18,26 @@ const SwipeIndicator = ({ progress, isMe, fired }: { progress: number; isMe: boo
   const offset = circumference - (progress * circumference);
 
   return (
-    <div 
-      className={`absolute top-1/2 ${isMe ? "right-full mr-3" : "left-full ml-3"} -translate-y-1/2 flex items-center justify-center pointer-events-none z-0`}
-      style={{ 
-        opacity: progress > 0.1 ? 1 : 0,
-        transform: `translateY(-50%) scale(${0.8 + progress * 0.2})`,
-      }}
-    >
-      <div className="relative flex items-center justify-center w-8 h-8">
-        <svg width={size} height={size} className="absolute -rotate-90">
-          <circle
-            cx={size/2} cy={size/2} r={radius}
-            fill="none" stroke="currentColor" strokeWidth={stroke}
-            className="text-foreground/[0.08]"
-          />
-          <circle
-            cx={size/2} cy={size/2} r={radius}
-            fill="none" stroke="currentColor" strokeWidth={stroke}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            className={`transition-all duration-75 ${fired ? "text-primary" : "text-primary/40"}`}
-          />
-        </svg>
-        <Reply 
-          size={14} 
-          className={`transition-all duration-200 ${fired ? "scale-125 text-primary" : "text-muted-foreground/60"} ${isMe ? "rotate-180" : ""}`} 
+    <div className="relative flex items-center justify-center w-8 h-8">
+      <svg width={size} height={size} className="absolute -rotate-90">
+        <circle
+          cx={size/2} cy={size/2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={stroke}
+          className="text-foreground/[0.08]"
         />
-      </div>
+        <circle
+          cx={size/2} cy={size/2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className={`transition-all duration-75 ${fired ? "text-primary" : "text-primary/40"}`}
+        />
+      </svg>
+      <Reply 
+        size={14} 
+        className={`transition-all duration-200 ${fired ? "scale-125 text-primary" : "text-muted-foreground/60"}`} 
+      />
     </div>
   );
 };
@@ -170,18 +162,27 @@ export function SwipeRow({
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseLeave}
     >
+      {/* Swipe Indicator (Progress Ring) - Fixed position relative to the row */}
+      {!msg.isUploading && offsetX > 0 && (
+        <div 
+          className={`absolute top-1/2 ${isMe ? "right-4" : "left-4"} -translate-y-1/2 z-0 pointer-events-none`}
+          style={{ 
+            opacity: progress > 0.1 ? 1 : 0,
+            transform: `translateY(-50%) scale(${0.8 + progress * 0.2})`,
+          }}
+        >
+          <SwipeIndicator progress={progress} fired={fired} />
+        </div>
+      )}
+
       {/* Swipe Row Content */}
       <div
-        className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"} relative transition-all`}
+        className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"} relative transition-all z-10`}
         style={{
           transform: `translateX(${isMe ? -offsetX : offsetX}px)`,
           transition: dragging ? "none" : "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
-        {/* Swipe Indicator (Progress Ring) */}
-        {!msg.isUploading && offsetX > 0 && (
-          <SwipeIndicator progress={progress} isMe={isMe} fired={fired} />
-        )}
 
         {/* Left-side avatar for incoming messages */}
         {!isMe && (
