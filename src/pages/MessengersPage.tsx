@@ -66,6 +66,8 @@ const MessengersPage = () => {
   const [showSelectMenu, setShowSelectMenu] = useState(false);
   const selectMenuRef = useRef<HTMLDivElement>(null);
 
+  const [typingStates, setTypingStates] = useState<Record<string, { userId: string; name?: string }[]>>({});
+
   const titleRef = useRef<HTMLHeadingElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -124,11 +126,49 @@ const MessengersPage = () => {
 
     socket.on("message recieved", handleMessageReceived);
     socket.on("messages read", invalidateOnRead);
+
+    socket.on("typing", (data: any) => {
+      const cid = data.chatId;
+      const uid = data.userId || data._id;
+      if (!cid || !uid) return;
+      setTypingStates(prev => {
+        const current = prev[cid] || [];
+        if (current.find(u => u.userId === uid)) return prev;
+        return { ...prev, [cid]: [...current, { userId: uid, name: data.name || data.userName }] };
+      });
+    });
+
+    socket.on("stop typing", (data: any) => {
+      const cid = data.chatId;
+      const uid = data.userId || data._id;
+      if (!cid || !uid) return;
+      setTypingStates(prev => {
+        const current = prev[cid] || [];
+        const next = current.filter(u => u.userId !== uid);
+        if (next.length === 0) {
+          const copy = { ...prev };
+          delete copy[cid];
+          return copy;
+        }
+        return { ...prev, [cid]: next };
+      });
+    });
+
     return () => {
       socket.off("message recieved", handleMessageReceived);
       socket.off("messages read", invalidateOnRead);
+      socket.off("typing");
+      socket.off("stop typing");
     };
   }, [socket, queryClient, user]);
+
+  // Periodic cleanup for typing states
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTypingStates({}); // Reset to clear any stale states
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const onFocus = () => queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -620,13 +660,23 @@ const MessengersPage = () => {
                     </div>
                     <div className="flex items-center gap-1.5 justify-between">
                       <div className="flex items-center gap-1 truncate flex-1">
-                        {isMine && (tickSeen
+                        {!typingStates[chat._id] && isMine && (tickSeen
                           ? <BsCheckAll size={18} className="text-[#4E89F0] shrink-0" />
                           : tickDelivered
                             ? <BsCheckAll size={18} className="text-muted-foreground shrink-0" />
                             : <BsCheck size={18} className="text-muted-foreground shrink-0" />)}
-                        <p className={`text-[14px] truncate ${isUnread ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-                          {latestMsg ? (
+                        
+                        <p className={`text-[14px] truncate flex items-center gap-1 ${typingStates[chat._id] ? "text-green-500 font-bold" : isUnread ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
+                          {typingStates[chat._id] ? (
+                            <>
+                              {isGroup ? `${typingStates[chat._id][0].name?.split(' ')[0] || "Someone"} is typing` : "typing"}
+                              <span className="flex gap-0.5 ml-1 items-center h-full pt-1">
+                                {[0, 180, 360].map(d => (
+                                  <span key={d} className="w-1 h-1 rounded-full bg-green-500 animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
+                                ))}
+                              </span>
+                            </>
+                          ) : latestMsg ? (
                             <>
                               {isGroup && latestMsg.senderId?._id !== user?._id && <span className="text-primary/70 font-bold mr-1">{latestMsg.senderId?.name}:</span>}
                               {latestMsg.text || "📷 Photo"}

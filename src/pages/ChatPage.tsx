@@ -28,6 +28,7 @@ import { ThemePicker, ChatTheme, THEMES } from "@/components/chat/ThemePicker";
 import { LockScreen } from "@/components/chat/LockScreen";
 import { MediaRenderer } from "@/components/chat/MediaRenderer";
 import { Chat, User } from "@/types/chat";
+import TypingIndicator from "@/components/chat/TypingIndicator";
 
 type MsgMenu = { msgId: string; x: number; y: number; msg: Msg } | null;
 type ConfirmType = "block" | "clear" | null;
@@ -854,23 +855,33 @@ const ChatPage = () => {
     socket.on("theme-updated", onSystemEvent);
     socket.on("settings-updated", onSystemEvent);
     socket.on("typing", (data: any) => {
-      const uid = data.userId || data._id;
+      const uid = typeof data === 'string' ? data : (data.userId || data._id || data.senderId);
+      if (!uid || uid === user?._id) return;
+
       if (isGroup) {
         setTypingUsers(prev => {
           if (prev.find(u => (u._id || (u as any).userId) === uid)) return prev;
-          return [...prev, { ...data, _id: uid, userId: uid }];
+          // Try to find user in participants
+          const participant = groupData?.participants?.find((p: any) => p._id === uid);
+          const userData = typeof data === 'object' ? data : {};
+          return [...prev, { ...userData, ...participant, _id: uid, userId: uid }];
         });
+        // Auto-clear after 10s as a fallback
         setTimeout(() => {
           setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
-        }, 8000);
+        }, 10000);
       } else {
         setIsTyping(true);
-        setTimeout(() => setIsTyping(false), 8000);
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        // Clear after 8s
+        const timer = setTimeout(() => setIsTyping(false), 8000);
+        typingTimerRef.current = timer;
       }
     });
 
     socket.on("stop typing", (data: any) => {
-      const uid = data?.userId || data?._id;
+      const uid = typeof data === 'string' ? data : (data?.userId || data?._id || data?.senderId);
+      if (!uid) return;
       if (isGroup) {
         setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
       } else {
@@ -897,7 +908,7 @@ const ChatPage = () => {
       socket.off("settings-updated", onSystemEvent);
       socket.off("typing"); socket.off("stop typing"); socket.off("user-online"); socket.off("user-offline");
     };
-  }, [socket, currentChat, user, queryClient]);
+  }, [socket, currentChat, user, queryClient, isGroup, groupData]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -920,6 +931,12 @@ const ChatPage = () => {
       prevMsgCountRef.current = messages.length;
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (isAtBottomRef.current && (isTyping || typingUsers.length > 0)) {
+      scrollToBottom("smooth");
+    }
+  }, [isTyping, typingUsers.length, scrollToBottom]);
 
 
   useEffect(() => () => {
@@ -1417,30 +1434,15 @@ const ChatPage = () => {
             );
           })}
 
-          <div className="overflow-hidden transition-all duration-300 ease-in-out"
-            style={{ maxHeight: (isTyping || (isGroup && typingUsers.length > 0)) ? 64 : 0, opacity: (isTyping || (isGroup && typingUsers.length > 0)) ? 1 : 0, marginBottom: (isTyping || (isGroup && typingUsers.length > 0)) ? 16 : 0 }}>
-            <div className="flex justify-start pt-1">
-              <div
-                className="rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm border border-black/[0.05] dark:border-white/[0.08]"
-                style={{
-                  background: typingBubbleBg || "rgba(240,240,240,0.85)",
-                  backdropFilter: !isDefault ? "blur(12px)" : "blur(6px)",
-                }}
-              >
-                {isGroup && typingUsers.length > 0 && (
-                  <img src={typingUsers[0].avatar || 'https://i.pravatar.cc/150'} className="w-5 h-5 rounded-full object-cover border border-white/20" alt="" />
-                )}
-                <div className="flex gap-1.5 items-center">
-                  {[0, 180, 360].map(d => (
-                    <div key={d} className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-typing-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
-                </div>
-                {isGroup && typingUsers.length > 0 && typingUsers[0].name && (
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter ml-0.5">{typingUsers[0].name.split(' ')[0]} is typing</span>
-                )}
-              </div>
-            </div>
-          </div>
+          <TypingIndicator 
+            isGroup={isGroup} 
+            typingUsers={typingUsers} 
+            isTyping={isTyping} 
+            chatUser={chatUser} 
+            typingBubbleBg={typingBubbleBg}
+            isEffectiveDark={isEffectiveDark}
+            isDefault={isDefault}
+          />
           <div ref={bottomRef} />
         </div>
 
