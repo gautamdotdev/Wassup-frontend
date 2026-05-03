@@ -94,11 +94,41 @@ const MessengersPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const inv = () => queryClient.invalidateQueries({ queryKey: ["chats"] });
-    socket.on("message recieved", inv);
-    socket.on("messages read", inv);
-    return () => { socket.off("message recieved", inv); socket.off("messages read", inv); };
-  }, [socket, queryClient]);
+
+    const handleMessageReceived = (newMessage: any) => {
+      const incomingChatId = newMessage.chatId?._id || newMessage.chatId;
+      if (!incomingChatId) return;
+
+      queryClient.setQueryData<any[]>(["chats"], (oldChats) => {
+        if (!oldChats) return oldChats;
+
+        const chatIndex = oldChats.findIndex((c: any) => c._id === incomingChatId);
+        if (chatIndex === -1) return oldChats;
+
+        const updatedChat = {
+          ...oldChats[chatIndex],
+          latestMessage: newMessage,
+          lastMessageTime: newMessage.createdAt || new Date().toISOString(),
+          unreadCount:
+            newMessage.senderId?._id === user?._id || newMessage.senderId === user?._id
+              ? oldChats[chatIndex].unreadCount ?? 0
+              : (oldChats[chatIndex].unreadCount ?? 0) + 1,
+        };
+
+        const rest = oldChats.filter((_: any, i: number) => i !== chatIndex);
+        return [updatedChat, ...rest];
+      });
+    };
+
+    const invalidateOnRead = () => queryClient.invalidateQueries({ queryKey: ["chats"] });
+
+    socket.on("message recieved", handleMessageReceived);
+    socket.on("messages read", invalidateOnRead);
+    return () => {
+      socket.off("message recieved", handleMessageReceived);
+      socket.off("messages read", invalidateOnRead);
+    };
+  }, [socket, queryClient, user]);
 
   useEffect(() => {
     const onFocus = () => queryClient.invalidateQueries({ queryKey: ["chats"] });
