@@ -5,7 +5,7 @@ import { gsap } from "gsap";
 
 function useIsDark() {
   const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains("dark")
+    document.documentElement.classList.contains("dark"),
   );
 
   useEffect(() => {
@@ -40,33 +40,33 @@ const BottomNav = () => {
 
   const pill = isDark
     ? {
-      background: "rgba(20, 20, 20, 0.65)",
-      border: "1px solid rgba(255,255,255,0.10)",
-      boxShadow:
-        "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.3) inset",
-    }
+        background: "rgba(20, 20, 20, 0.65)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow:
+          "0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.3) inset",
+      }
     : {
-      background: "rgba(255, 255, 255, 0.72)",
-      border: "1px solid rgba(0,0,0,0.08)",
-      boxShadow:
-        "0 4px 24px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.04) inset",
-    };
+        background: "rgba(255, 255, 255, 0.72)",
+        border: "1px solid rgba(0,0,0,0.08)",
+        boxShadow:
+          "0 4px 24px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.04) inset",
+      };
 
   const token = isDark
     ? {
-      activeColor: "rgba(255,255,255,1)",
-      inactiveColor: "rgba(255,255,255,0.40)",
-      activeBg: "rgba(255,255,255,0.18)",
-      activeBoxShadow:
-        "0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
-    }
+        activeColor: "rgba(255,255,255,1)",
+        inactiveColor: "rgba(255,255,255,0.40)",
+        activeBg: "rgba(255,255,255,0.18)",
+        activeBoxShadow:
+          "0 2px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
+      }
     : {
-      activeColor: "rgba(0,0,0,0.90)",
-      inactiveColor: "rgba(0,0,0,0.35)",
-      activeBg: "rgba(0,0,0,0.07)",
-      activeBoxShadow:
-        "0 2px 10px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.70)",
-    };
+        activeColor: "rgba(0,0,0,0.90)",
+        inactiveColor: "rgba(0,0,0,0.35)",
+        activeBg: "rgba(0,0,0,0.07)",
+        activeBoxShadow:
+          "0 2px 10px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.70)",
+      };
 
   // ── Mount entrance ────────────────────────────────────────────
   useEffect(() => {
@@ -74,7 +74,7 @@ const BottomNav = () => {
     gsap.fromTo(
       pillRef.current,
       { y: 20, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", delay: 0.1 }
+      { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", delay: 0.1 },
     );
   }, []);
 
@@ -111,9 +111,11 @@ const BottomNav = () => {
     location.pathname.startsWith("/chat/") ||
     location.pathname === "/welcome" ||
     location.pathname === "/login" ||
-    location.pathname === "/archived"
-  ) return null;
-
+    location.pathname === "/archived" ||
+    location.pathname === "/settings" ||
+    location.pathname === "/edit-profile"
+  )
+    return null;
 
   return (
     <div
@@ -161,7 +163,9 @@ const BottomNav = () => {
           return (
             <button
               key={tab.label}
-              ref={(el) => { buttonRefs.current[i] = el; }}
+              ref={(el) => {
+                buttonRefs.current[i] = el;
+              }}
               onClick={() => navigate(tab.path)}
               title={tab.label}
               style={{

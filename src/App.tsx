@@ -10,6 +10,8 @@ import ChatPage from "./pages/ChatPage";
 import SearchPage from "./pages/SearchPage";
 import ActivityPage from "./pages/ActivityPage";
 import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
+import EditProfilePage from "./pages/EditProfilePage";
 import ChatUserProfile from "./pages/ChatUserProfile";
 import ChatMediaPage from "./pages/ChatMediaPage";
 import ArchivedPage from "./pages/ArchivedPage";
@@ -23,12 +25,27 @@ import { ChatNotificationBanner } from "./components/ChatNotificationBanner";
 import { Loader2 } from "lucide-react";
 import { FirebaseInit } from "./components/FirebaseInit";
 
+// Apply persisted theme on app load
+const storedTheme = localStorage.getItem("theme");
+if (storedTheme === "dark") {
+  document.documentElement.classList.add("dark");
+} else if (storedTheme === "light") {
+  document.documentElement.classList.remove("dark");
+}
+
 function RootRedirect() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  return user
-    ? <Navigate to="/messengers" replace />
-    : <Navigate to="/welcome" replace />;
+  if (loading)
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  return user ? (
+    <Navigate to="/messengers" replace />
+  ) : (
+    <Navigate to="/welcome" replace />
+  );
 }
 
 const queryClient = new QueryClient();
@@ -45,25 +62,168 @@ const App = () => (
             <ChatNotificationBanner />
             <Routes>
               {/* Guest-only */}
-              <Route path="/welcome" element={<GuestOnly><WelcomePage /></GuestOnly>} />
-              <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+              <Route
+                path="/welcome"
+                element={
+                  <GuestOnly>
+                    <WelcomePage />
+                  </GuestOnly>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <GuestOnly>
+                    <LoginPage />
+                  </GuestOnly>
+                }
+              />
 
               {/* Root redirect */}
               <Route path="/" element={<RootRedirect />} />
 
               {/* Protected routes */}
-              <Route path="/messengers" element={<RequireAuth><MessengersPage /></RequireAuth>} />
-              <Route path="/chat/:userId" element={<RequireAuth><ChatPage /></RequireAuth>} />
-              <Route path="/chat/:userId/profile" element={<RequireAuth><ChatUserProfile /></RequireAuth>} />
-              <Route path="/chat/:userId/media" element={<RequireAuth><ChatMediaPage /></RequireAuth>} />
-              <Route path="/chat/group/:userId" element={<RequireAuth><ChatPage /></RequireAuth>} />
-              <Route path="/chat/group/:userId/profile" element={<RequireAuth><GroupProfilePage /></RequireAuth>} />
-              <Route path="/chat/group/:userId/media" element={<RequireAuth><ChatMediaPage /></RequireAuth>} />
-              <Route path="/new-group" element={<RequireAuth><NewGroupPage /></RequireAuth>} />
-              <Route path="/search" element={<RequireAuth><SearchPage /></RequireAuth>} />
-              <Route path="/archived" element={<RequireAuth><ArchivedPage /></RequireAuth>} />
-              <Route path="/activity" element={<RequireAuth><ActivityPage /></RequireAuth>} />
-              <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+              <Route
+                path="/messengers"
+                element={
+                  <RequireAuth>
+                    <MessengersPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/:userId"
+                element={
+                  <RequireAuth>
+                    <ChatPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/:userId/profile"
+                element={
+                  <RequireAuth>
+                    <ChatUserProfile />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/:userId/media"
+                element={
+                  <RequireAuth>
+                    <ChatMediaPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/group/:userId"
+                element={
+                  <RequireAuth>
+                    <ChatPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/group/:userId/profile"
+                element={
+                  <RequireAuth>
+                    <GroupProfilePage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/chat/group/:userId/media"
+                element={
+                  <RequireAuth>
+                    <ChatMediaPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/new-group"
+                element={
+                  <RequireAuth>
+                    <NewGroupPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <RequireAuth>
+                    <SearchPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/archived"
+                element={
+                  <RequireAuth>
+                    <ArchivedPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <RequireAuth>
+                    <ActivityPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <ProfilePage />
+                  </RequireAuth>
+                }
+              />
+
+              {/* Settings routes */}
+              <Route
+                path="/settings"
+                element={
+                  <RequireAuth>
+                    <SettingsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/privacy"
+                element={
+                  <RequireAuth>
+                    <SettingsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/devices"
+                element={
+                  <RequireAuth>
+                    <SettingsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/help"
+                element={
+                  <RequireAuth>
+                    <SettingsPage />
+                  </RequireAuth>
+                }
+              />
+
+              {/* Edit profile */}
+              <Route
+                path="/edit-profile"
+                element={
+                  <RequireAuth>
+                    <EditProfilePage />
+                  </RequireAuth>
+                }
+              />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNav />
