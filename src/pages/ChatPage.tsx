@@ -1022,34 +1022,62 @@ const ChatPage = () => {
     : isOnline ? "Online"
       : chatUser?.lastSeen ? `Last seen ${new Date(chatUser.lastSeen).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Offline";
 
+  const isGroupAdmin = isGroup && groupData?.admins?.some((a: any) => (a._id || a) === user?._id);
+
+  const getMsgMenuActions = (msg: any) => {
+    return [
+      { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msg) },
+      {
+        icon: <Pencil size={15} strokeWidth={1.5} />,
+        label: "Edit",
+        fn: () => handleMsgEdit(msg),
+        hide: msg.senderId !== "me" || !!msg.images?.length || (msg.createdAt && new Date(msg.createdAt).getTime() < Date.now() - 3600000)
+      },
+      { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msg), hide: !msg.text },
+      { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msg) },
+      { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msg) },
+      { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for me", fn: () => handleMsgDelete(msg, false), danger: true },
+      { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for everyone", fn: () => handleMsgDelete(msg, true), danger: true, hide: msg.senderId !== "me" && !isGroupAdmin },
+    ].filter((a: any) => !a.hide);
+  };
+
   const getMsgMenuStyle = () => {
     if (!msgMenu) return {};
-    const menuW = 250, menuH = 300;
-    const vw = window.innerWidth, vh = window.innerHeight;
+    const actions = getMsgMenuActions(msgMenu.msg);
+    const menuW = 250;
+    // Calculation: (actions * 51px approx height) + 60px for reaction bar
+    const menuH = (actions.length * 51) + 60; 
+    
+    // Respect the max-width of the app for horizontal positioning
+    const appWidth = Math.min(window.innerWidth, 430);
+    const vh = window.innerHeight;
+    const headerHeight = 76; // Approx height of header + safety
+    
+    // Center alignment relative to touch but within app width
     let left = msgMenu.x - menuW / 2;
     let top = msgMenu.y + 12;
-    if (left + menuW > vw - 12) left = vw - menuW - 12;
-    if (left < 12) left = 12;
-    if (top + menuH > vh - 12) top = msgMenu.y - menuH - 12;
+
+    // Constrain horizontal (within the 430px container)
+    const margin = 16;
+    if (left + menuW > appWidth - margin) left = appWidth - menuW - margin;
+    if (left < margin) left = margin;
+
+    // Flip logic: if it overflows bottom, show it above the touch point
+    if (top + menuH > vh - 20) {
+      top = msgMenu.y - menuH - 12;
+    }
+
+    // Safety bounds (ensure it doesn't overlap header or bottom bar)
+    if (top < headerHeight) top = headerHeight;
+    if (top + menuH > vh - 20) {
+      // If it's too tall to fit anywhere, just center it as much as possible
+      top = Math.max(headerHeight, (vh - menuH) / 2);
+    }
+
     return { left, top };
   };
 
-  const isGroupAdmin = isGroup && groupData?.admins?.some((a: any) => (a._id || a) === user?._id);
-
-  const msgMenuActions = msgMenu ? [
-    { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msgMenu.msg) },
-    {
-      icon: <Pencil size={15} strokeWidth={1.5} />,
-      label: "Edit",
-      fn: () => handleMsgEdit(msgMenu.msg),
-      hide: msgMenu.msg.senderId !== "me" || !!msgMenu.msg.images?.length || (msgMenu.msg.createdAt && new Date(msgMenu.msg.createdAt).getTime() < Date.now() - 3600000)
-    },
-    { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msgMenu.msg), hide: !msgMenu.msg.text },
-    { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msgMenu.msg) },
-    { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msgMenu.msg) },
-    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for me", fn: () => handleMsgDelete(msgMenu.msg, false), danger: true },
-    { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for everyone", fn: () => handleMsgDelete(msgMenu.msg, true), danger: true, hide: msgMenu.msg.senderId !== "me" && !isGroupAdmin },
-  ].filter((a: any) => !a.hide) : [];
+  const msgMenuActions = msgMenu ? getMsgMenuActions(msgMenu.msg) : [];
 
   // Compute the chat container background style
   const chatContainerStyle: React.CSSProperties = isDefault
@@ -1318,7 +1346,7 @@ const ChatPage = () => {
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col">
+        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col scrollbar-none">
           {/* Top Sentinel for Infinite Scroll */}
           <div ref={topSentinelRef} className="h-1 w-full shrink-0" />
 

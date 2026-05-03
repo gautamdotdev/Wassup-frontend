@@ -32,7 +32,7 @@ const ArchivedPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col max-w-[430px] mx-auto relative bg-background">
+    <div className="h-screen flex flex-col max-w-[430px] mx-auto relative bg-background overflow-y-auto scrollbar-none">
       <style>{`
         @keyframes menuIn { from{opacity:0;transform:scale(0.88) translateY(-6px)} to{opacity:1;transform:scale(1) translateY(0)} }
       `}</style>
@@ -83,7 +83,7 @@ const ArchivedPage = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6">
+      <div className="flex-1 overflow-x-hidden pt-2 pb-6">
         <div className="px-5 pb-3">
           <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
             {FAKE_ARCHIVED.length} archived chats — simulated

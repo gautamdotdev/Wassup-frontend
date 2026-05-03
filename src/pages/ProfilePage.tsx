@@ -78,7 +78,7 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background max-w-[430px] mx-auto pb-24 overflow-y-auto scrollbar-none">
+    <div className="h-screen bg-background max-w-[430px] mx-auto pb-24 overflow-y-auto scrollbar-none">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">Profile</h1>

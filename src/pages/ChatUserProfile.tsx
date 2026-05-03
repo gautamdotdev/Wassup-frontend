@@ -2,8 +2,8 @@ import {
   ArrowLeft, MoreVertical, ChevronRight,
   Bell, Lock, LockOpen, AlertTriangle, Trash2, ImageIcon, BellOff
 } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
 import api from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { toast } from "sonner";
@@ -12,40 +12,42 @@ import { LockScreen } from "@/components/chat/LockScreen";
 
 const ChatUserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
-  const navigate   = useNavigate();
-  const { user }   = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
 
-  const [chatUser, setChatUser]   = useState<any>(null);
-  const [chat, setChat]           = useState<any>(null);
+  const [chatUser, setChatUser] = useState<any>(null);
+  const [chat, setChat] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isLocked, setIsLocked]   = useState(false);
-  const [isMuted,  setIsMuted]    = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [confirmType, setConfirmType] = useState<"block" | "clear" | null>(null);
   const [showLockScreen, setShowLockScreen] = useState<"set" | null>(null);
+  const fetchedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     const load = async () => {
       try {
         setIsLoading(true);
-        const isGroupId = window.location.pathname.includes('/chat/group/');
+        const isGroupId = location.pathname.includes('/chat/group/');
         let chatData;
-        
+
         if (isGroupId) {
-            const res = await api.get('/chats');
-            chatData = res.data.find((c: any) => c._id === userId);
-            setChatUser({ 
-              name: chatData?.chatName, 
-              avatar: chatData?.avatar, 
-              isGroup: true,
-              description: chatData?.description 
-            });
+          const res = await api.get('/chats');
+          chatData = res.data.find((c: any) => c._id === userId);
+          setChatUser({
+            name: chatData?.chatName,
+            avatar: chatData?.avatar,
+            isGroup: true,
+            description: chatData?.description
+          });
         } else {
-            const { data: userData } = await api.get(`/users/${userId}`);
-            setChatUser(userData);
-            const res = await api.post("/chats", { userId });
-            chatData = res.data;
+          const { data: userData } = await api.get(`/users/${userId}`);
+          setChatUser(userData);
+          const res = await api.post("/chats", { userId });
+          chatData = res.data;
         }
 
         if (chatData) {
@@ -57,8 +59,11 @@ const ChatUserProfile = () => {
       } catch (e) { console.error(e); }
       finally { setIsLoading(false); }
     };
-    if (userId) load();
-  }, [userId, user]);
+    if (userId && fetchedIdRef.current !== userId) {
+      fetchedIdRef.current = userId;
+      load();
+    }
+  }, [userId, user, location.pathname]);
 
   /* ── Mute ── */
   const handleMuteToggle = async () => {
@@ -101,12 +106,12 @@ const ChatUserProfile = () => {
   };
   const doClear = async () => {
     setConfirmType(null);
-    try { await api.delete(`/chats/${chat._id}/messages`); toast.success("Chat cleared"); navigate(window.location.pathname.replace('/profile', '')); }
+    try { await api.delete(`/chats/${chat._id}/messages`); toast.success("Chat cleared"); navigate(location.pathname.replace('/profile', '')); }
     catch { toast.error("Failed to clear chat"); }
   };
 
   return (
-    <div className="min-h-screen bg-background max-w-[430px] mx-auto overflow-y-auto scrollbar-none flex flex-col items-center pb-20">
+    <div className="h-screen bg-background max-w-[430px] mx-auto overflow-y-auto scrollbar-none flex flex-col items-center pb-20">
 
       {/* Modals */}
       <ConfirmModal
@@ -178,24 +183,7 @@ const ChatUserProfile = () => {
         )}
       </div>
 
-      {/* Media shortcut card */}
-      <div className="w-full px-5 mt-6 mb-4">
-        <button
-          onClick={() => navigate(window.location.pathname.replace('/profile', '/media'))}
-          className="w-full bg-card rounded-[22px] px-5 py-4 shadow-sm border border-border/20 flex items-center justify-between hover:bg-secondary/30 transition-colors active:scale-[0.98]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <ImageIcon size={18} className="text-blue-500" strokeWidth={1.8} />
-            </div>
-            <div className="text-left">
-              <p className="text-[15px] font-semibold text-foreground leading-tight">Media & Files</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">View all shared media</p>
-            </div>
-          </div>
-          <ChevronRight size={17} className="text-muted-foreground/60" />
-        </button>
-      </div>
+      {/* Media shortcut card removed per user request */}
 
       {/* Settings */}
       <div className="w-full px-5 mb-4">
@@ -208,7 +196,7 @@ const ChatUserProfile = () => {
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 shadow-sm border border-border/20">
               {isMuted
                 ? <BellOff size={18} strokeWidth={1.8} className="text-foreground" />
-                : <Bell    size={18} strokeWidth={1.8} className="text-foreground" />}
+                : <Bell size={18} strokeWidth={1.8} className="text-foreground" />}
             </div>
             <div className="flex-1 text-left">
               <p className="text-[15px] font-medium text-foreground leading-tight">Notifications</p>
@@ -222,7 +210,7 @@ const ChatUserProfile = () => {
             className="w-full flex items-center gap-4 py-3.5 hover:opacity-80 transition-opacity active:scale-[0.99]">
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 shadow-sm border border-border/20">
               {isLocked
-                ? <Lock    size={18} strokeWidth={1.8} className="text-primary"    />
+                ? <Lock size={18} strokeWidth={1.8} className="text-primary" />
                 : <LockOpen size={18} strokeWidth={1.8} className="text-foreground" />}
             </div>
             <div className="flex-1 text-left">
@@ -242,8 +230,8 @@ const ChatUserProfile = () => {
         <p className="text-[12px] font-semibold uppercase tracking-widest text-muted-foreground mb-3 px-1">Privacy</p>
         <div className="flex flex-col rounded-[20px] bg-secondary/30 px-4 py-2 border border-border/40">
           {[
-            ...(!chatUser?.isGroup ? [{ icon: AlertTriangle, label: "Block contact", sub: "Stop receiving messages",    action: () => setConfirmType("block"), danger: true  }] : []),
-            { icon: Trash2,        label: "Clear chat",    sub: "Delete all messages for you", action: () => setConfirmType("clear"), danger: true  },
+            ...(!chatUser?.isGroup ? [{ icon: AlertTriangle, label: "Block contact", sub: "Stop receiving messages", action: () => setConfirmType("block"), danger: true }] : []),
+            { icon: Trash2, label: "Clear chat", sub: "Delete all messages for you", action: () => setConfirmType("clear"), danger: true },
           ].map(({ icon: Icon, label, sub, action, danger }, i, arr) => (
             <button key={label} onClick={action}
               className={`w-full flex items-center gap-4 py-3.5 hover:opacity-80 transition-opacity active:scale-[0.99] ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}>

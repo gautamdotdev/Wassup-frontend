@@ -389,7 +389,7 @@ const MessengersPage = () => {
           </div>
         </div>
       )}
-      <div className="min-h-screen bg-background pb-28 max-w-[430px] mx-auto font-sans" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+      <div className="h-screen bg-background pb-28 max-w-[430px] mx-auto font-sans overflow-y-auto scrollbar-none">
 
         {/* ── Header ── */}
         {selecting ? (

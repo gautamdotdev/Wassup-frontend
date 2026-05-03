@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Image as ImageIcon, Play, Grid, Film } from "lucide-react";
 import api from "../lib/api";
 import { toast } from "sonner";
@@ -62,6 +62,7 @@ const MediaThumb = ({
 const ChatMediaPage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate   = useNavigate();
+  const location   = useLocation();
   const { user }   = useAuth();
 
   const [chatUser, setChatUser] = useState<any>(null);
@@ -73,7 +74,7 @@ const ChatMediaPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const isGroupId = window.location.pathname.includes('/chat/group/');
+        const isGroupId = location.pathname.includes('/chat/group/');
         let chatData;
         if (isGroupId) {
           const res = await api.get('/chats');
@@ -94,7 +95,7 @@ const ChatMediaPage = () => {
       finally { setLoading(false); }
     };
     if (userId) load();
-  }, [userId, user]);
+  }, [userId, user, location.pathname]);
 
   const filtered = media.filter(m =>
     tab === "all"    ? true :
@@ -106,7 +107,7 @@ const ChatMediaPage = () => {
   const imageItems = filtered.filter(m => !isVideo(m.mediaUrl, m.mediaType));
 
   return (
-    <div className="min-h-screen bg-background max-w-[430px] mx-auto flex flex-col">
+    <div className="h-screen bg-background max-w-[430px] mx-auto overflow-y-auto scrollbar-none flex flex-col">
       {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />}
 
       {/* Header */}

@@ -71,7 +71,7 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 max-w-[430px] mx-auto">
+    <div className="h-screen bg-background pb-24 max-w-[430px] mx-auto overflow-y-auto scrollbar-none">
 
       {/* Header */}
       <div className="px-5 pt-6 pb-2">
