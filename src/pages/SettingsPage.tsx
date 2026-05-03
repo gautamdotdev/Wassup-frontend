@@ -28,51 +28,12 @@ import {
   Palette,
   Clock,
   UserX,
-  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import api from "../lib/api";
 import { toast } from "sonner";
-
-// ── Logout confirmation modal ──────────────────────────────────────────────
-const LogoutModal = ({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: () => void;
-  onCancel: () => void;
-}) => (
-  <div className="fixed inset-0 z-50 flex items-end justify-center pb-8 px-5 bg-black/40 backdrop-blur-sm">
-    <div className="w-full max-w-[400px] bg-background border border-border/40 rounded-[28px] overflow-hidden shadow-2xl">
-      <div className="flex flex-col items-center px-6 pt-7 pb-3">
-        <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-          <AlertTriangle size={26} className="text-red-500" />
-        </div>
-        <p className="text-[18px] font-semibold text-foreground text-center">
-          Log out?
-        </p>
-        <p className="text-[13px] text-muted-foreground text-center mt-1.5 leading-relaxed">
-          You'll need to sign in again to access your messages.
-        </p>
-      </div>
-      <div className="flex flex-col gap-2 px-5 py-5">
-        <button
-          onClick={onConfirm}
-          className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-semibold text-[15px] active:scale-95 transition-all"
-        >
-          Yes, log me out
-        </button>
-        <button
-          onClick={onCancel}
-          className="w-full py-3.5 rounded-2xl bg-secondary/60 text-foreground font-medium text-[15px] active:scale-95 transition-all"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-);
+import { ConfirmModal } from "@/components/chat/ConfirmModal";
 
 // ── Toggle Row ──────────────────────────────────────────────────────────────
 const ToggleRow = ({
@@ -218,7 +179,6 @@ const SettingsPage = () => {
     }
   };
 
-  // All settings as renderable items for search
   const allSettingItems = [
     {
       keywords: "dark light theme appearance",
@@ -508,12 +468,16 @@ const SettingsPage = () => {
 
   return (
     <div className="h-screen bg-background max-w-[430px] mx-auto pb-10 overflow-y-auto scrollbar-none">
-      {showLogout && (
-        <LogoutModal
-          onConfirm={handleLogout}
-          onCancel={() => setShowLogout(false)}
-        />
-      )}
+      <ConfirmModal
+        isOpen={showLogout}
+        title="Log out?"
+        message="You'll need to sign in again to access your messages."
+        confirmLabel="Yes, log me out"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
+      />
 
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-md px-5 pt-5 pb-3 border-b border-border/20">
@@ -538,7 +502,7 @@ const SettingsPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search settings..."
-            className="w-full bg-secondary/40 border border-border/20 rounded-2xl pl-9 pr-9 py-2.5 text-[14px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-border/60 transition-colors"
+            className="w-full bg-secondary/40 border border-border/20 rounded-full pl-9 pr-9 py-2.5 text-[14px] text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-border/60 transition-colors"
           />
           {search && (
             <button
@@ -552,7 +516,6 @@ const SettingsPage = () => {
       </div>
 
       <div className="px-5 pt-5 flex flex-col gap-5">
-        {/* ── Search Results — render real components ── */}
         {filteredItems ? (
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-2.5 px-1">
@@ -573,7 +536,6 @@ const SettingsPage = () => {
           </div>
         ) : (
           <>
-            {/* ── Appearance ── */}
             <Section label="Appearance">
               <ToggleRow
                 icon={dark ? Moon : Sun}
@@ -585,7 +547,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── Notifications ── */}
             <Section label="Notifications">
               <ToggleRow
                 icon={notifications ? Bell : BellOff}
@@ -611,7 +572,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── Privacy ── */}
             <Section label="Privacy">
               <ToggleRow
                 icon={readReceipts ? Eye : EyeOff}
@@ -636,7 +596,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── Chats ── */}
             <Section label="Chats">
               <ToggleRow
                 icon={Download}
@@ -662,7 +621,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── Account ── */}
             <Section label="Account">
               <NavRow
                 icon={Shield}
@@ -693,7 +651,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── About ── */}
             <Section label="About">
               <NavRow
                 icon={HelpCircle}
@@ -716,7 +673,6 @@ const SettingsPage = () => {
               />
             </Section>
 
-            {/* ── Danger Zone ── */}
             <Section label="Danger Zone">
               <NavRow
                 icon={UserX}

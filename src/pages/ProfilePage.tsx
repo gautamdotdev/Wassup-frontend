@@ -83,7 +83,9 @@ const ProfilePage = () => {
     <div className="h-screen bg-background max-w-[430px] mx-auto pb-24 overflow-y-auto scrollbar-none">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">Profile</h1>
+        <h1 className="col-start-1 row-start-1 text-2xl font-bold tracking-tight text-foreground z-0 justify-self-start">
+          Profile
+        </h1>
       </div>
 
       {/* Avatar + info */}

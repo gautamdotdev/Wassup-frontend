@@ -29,6 +29,10 @@ const tabs = [
   { icon: User, label: "Profile", path: "/profile" },
 ];
 
+const hiddenRoutes = ["/welcome", "/login", "/archived", "/edit-profile"];
+
+const hiddenPrefixes = ["/chat/", "/settings"];
+
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,7 +72,6 @@ const BottomNav = () => {
           "0 2px 10px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.70)",
       };
 
-  // ── Mount entrance ────────────────────────────────────────────
   useEffect(() => {
     if (!pillRef.current) return;
     gsap.fromTo(
@@ -78,7 +81,6 @@ const BottomNav = () => {
     );
   }, []);
 
-  // ── Slide active bg to current tab ───────────────────────────
   useEffect(() => {
     const activeIndex = tabs.findIndex((t) => t.path === location.pathname);
     const btn = buttonRefs.current[activeIndex];
@@ -92,28 +94,18 @@ const BottomNav = () => {
     const left = btnRect.left - containerRect.left;
     const width = btnRect.width;
 
-    // On first render just snap, then slide from then on
     const isFirst = gsap.getProperty(bg, "opacity") === 0;
 
     if (isFirst) {
       gsap.set(bg, { left, width, opacity: 1 });
     } else {
-      gsap.to(bg, {
-        left,
-        width,
-        duration: 0.35,
-        ease: "power2.inOut",
-      });
+      gsap.to(bg, { left, width, duration: 0.35, ease: "power2.inOut" });
     }
   }, [location.pathname]);
 
   if (
-    location.pathname.startsWith("/chat/") ||
-    location.pathname === "/welcome" ||
-    location.pathname === "/login" ||
-    location.pathname === "/archived" ||
-    location.pathname === "/settings" ||
-    location.pathname === "/edit-profile"
+    hiddenRoutes.includes(location.pathname) ||
+    hiddenPrefixes.some((p) => location.pathname.startsWith(p))
   )
     return null;
 
@@ -143,7 +135,6 @@ const BottomNav = () => {
           position: "relative",
         }}
       >
-        {/* Active sliding background */}
         <div
           ref={slidingBgRef}
           style={{

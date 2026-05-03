@@ -81,7 +81,7 @@ const EditProfilePage = () => {
           <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-2.5 px-1">
             Display Name
           </p>
-          <div className="relative flex items-center rounded-[20px] bg-secondary/20 border border-border/30 overflow-hidden px-4 py-3.5 gap-3">
+          <div className="relative flex items-center rounded-full bg-secondary/20 border border-border/30 overflow-hidden px-4 py-3.5 gap-3">
             <User
               size={17}
               strokeWidth={1.6}
