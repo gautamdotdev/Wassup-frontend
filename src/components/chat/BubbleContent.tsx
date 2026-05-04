@@ -37,7 +37,7 @@ export function BubbleContent({
   const hasTheme = !!activeBg;
 
   const bubbleClass = hasTheme ? "" : neutralBgClass;
-  const bubbleStyle = hasTheme ? { backgroundColor: activeBg, color: activeText } : {};
+  const bubbleStyle = hasTheme ? { background: activeBg, color: activeText } : {};
   const textClass = hasTheme ? "" : "text-foreground";
   const textStyle = hasTheme ? { color: activeText } : {};
 
