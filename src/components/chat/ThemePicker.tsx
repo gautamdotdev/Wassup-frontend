@@ -245,40 +245,44 @@ export const THEMES: ThemeDef[] = [
     id: "galaxy",
     label: "Galaxy",
     badge: "Animated",
-    chatBg: "linear-gradient(135deg, #0a0015 0%, #120025 40%, #050010 100%)",
+    chatBg:
+      "linear-gradient(135deg, #050010 0%, #0d001f 30%, #1a0035 60%, #050010 100%)",
     hex: "#0a0015",
-    headerBg: "#0a0015",
-    bottomBg: "#0a0015",
-    msgMenuBg: "rgba(10,0,21,0.95)",
-    msgMenuBorder: "rgba(233,213,255,0.15)",
-    myBubble: "#7c3aed",
+    headerBg: "linear-gradient(135deg, #0a0015 0%, #1a0035 100%)",
+    bottomBg:
+      "linear-gradient(to top, #0a0015 0%, #1a003580 60%, transparent 100%)",
+    msgMenuBg: "rgba(15,0,30,0.95)",
+    msgMenuBorder: "rgba(168,85,247,0.25)",
+    myBubble: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
     myBubbleText: "#ffffff",
-    otherBubble: "rgba(20,0,40,0.8)",
-    otherBubbleText: "#e9d5ff",
-    mutedText: "rgba(233,213,255,0.5)",
+    otherBubble: "rgba(28,0,56,0.75)",
+    otherBubbleText: "#c4b5fd",
+    mutedText: "rgba(196,181,253,0.55)",
     thumbBg: "#0a0015",
     thumbMine: "#7c3aed",
-    thumbOther: "#14002a",
+    thumbOther: "#1a0035",
     animated: true,
   },
   {
     id: "aurora",
     label: "Aurora",
     badge: "Animated",
-    chatBg: "linear-gradient(160deg, #001a1a 0%, #001520 60%, #001a1a 100%)",
-    hex: "#001a1a",
-    headerBg: "#001a1a",
-    bottomBg: "#001a1a",
-    msgMenuBg: "rgba(0,26,26,0.95)",
-    msgMenuBorder: "rgba(94,234,212,0.15)",
-    myBubble: "#0d9488",
+    chatBg:
+      "linear-gradient(160deg, #00100f 0%, #001a20 40%, #000d1a 70%, #00100f 100%)",
+    hex: "#00100f",
+    headerBg: "linear-gradient(135deg, #00100f 0%, #001a20 100%)",
+    bottomBg:
+      "linear-gradient(to top, #00100f 0%, #001a2080 60%, transparent 100%)",
+    msgMenuBg: "rgba(0,20,20,0.95)",
+    msgMenuBorder: "rgba(94,234,212,0.22)",
+    myBubble: "linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)",
     myBubbleText: "#ffffff",
-    otherBubble: "rgba(0,30,30,0.8)",
-    otherBubbleText: "#5eead4",
-    mutedText: "rgba(94,234,212,0.5)",
-    thumbBg: "#001a1a",
+    otherBubble: "rgba(0,28,32,0.75)",
+    otherBubbleText: "#99f6e4",
+    mutedText: "rgba(94,234,212,0.55)",
+    thumbBg: "#00100f",
     thumbMine: "#0d9488",
-    thumbOther: "#001e1e",
+    thumbOther: "#001a20",
     animated: true,
   },
   {
@@ -428,46 +432,221 @@ function GalaxyStars() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <style>{`
         @keyframes twinkle {
-          0%,100% { opacity: 0.1; transform: scale(0.8); }
-          50%      { opacity: 1;   transform: scale(1.3); }
+          0%,100% { opacity: 0.08; transform: scale(0.7); }
+          50%      { opacity: 1;   transform: scale(1.4); }
+        }
+        @keyframes twinklePurple {
+          0%,100% { opacity: 0.1; transform: scale(0.8); filter: blur(0px); }
+          50%      { opacity: 0.9; transform: scale(1.5); filter: blur(0.5px); }
         }
         @keyframes shoot {
-          0%   { transform: translateX(0) translateY(0) rotate(-30deg); opacity: 1; }
-          100% { transform: translateX(180px) translateY(60px) rotate(-30deg); opacity: 0; }
+          0%   { transform: translateX(0) translateY(0) rotate(-30deg); opacity: 1; width: 50px; }
+          100% { transform: translateX(220px) translateY(75px) rotate(-30deg); opacity: 0; width: 80px; }
         }
-        .g-star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--d) var(--del) infinite; }
-        .g-shoot { position: absolute; width: 50px; height: 1.5px; background: linear-gradient(90deg,white,transparent); border-radius: 9999px; animation: shoot var(--d) var(--del) infinite; }
+        @keyframes nebulaPulse {
+          0%,100% { transform: scale(1) rotate(0deg);   opacity: 0.07; }
+          50%      { transform: scale(1.12) rotate(8deg); opacity: 0.15; }
+        }
+        @keyframes orbitDot {
+          0%   { transform: rotate(0deg)   translateX(38px) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
+        }
+        @keyframes floatPlanet {
+          0%,100% { transform: translateY(0px);   }
+          50%      { transform: translateY(-10px); }
+        }
+        .g-star {
+          position: absolute; border-radius: 50%;
+          animation: twinkle var(--d) var(--del) infinite ease-in-out;
+        }
+        .g-star-purple {
+          position: absolute; border-radius: 50%;
+          animation: twinklePurple var(--d) var(--del) infinite ease-in-out;
+        }
+        .g-shoot {
+          position: absolute; height: 1.5px;
+          background: linear-gradient(90deg, #e9d5ff, #a855f7, transparent);
+          border-radius: 9999px;
+          animation: shoot var(--d) var(--del) infinite ease-in;
+          box-shadow: 0 0 4px #a855f7;
+        }
+        .g-nebula {
+          position: absolute; border-radius: 50%; filter: blur(55px);
+          animation: nebulaPulse var(--d) var(--del) infinite ease-in-out;
+        }
+        .g-planet {
+          position: absolute; border-radius: 50%;
+          animation: floatPlanet var(--d) var(--del) infinite ease-in-out;
+        }
+        .g-orbit-dot {
+          position: absolute; border-radius: 50%;
+          animation: orbitDot var(--d) var(--del) infinite linear;
+        }
       `}</style>
-      {Array.from({ length: 60 }).map((_, i) => (
+
+      {/* Nebula blobs — keep galaxy DNA colors */}
+      {[
+        {
+          w: 260,
+          h: 260,
+          top: "5%",
+          left: "10%",
+          bg: "rgba(124,58,237,0.18)",
+          d: "9s",
+          del: "0s",
+        },
+        {
+          w: 200,
+          h: 200,
+          top: "55%",
+          left: "60%",
+          bg: "rgba(168,85,247,0.14)",
+          d: "11s",
+          del: "-4s",
+        },
+        {
+          w: 180,
+          h: 180,
+          top: "30%",
+          left: "-5%",
+          bg: "rgba(91,33,182,0.2)",
+          d: "8s",
+          del: "-2s",
+        },
+        {
+          w: 150,
+          h: 150,
+          top: "75%",
+          left: "20%",
+          bg: "rgba(233,213,255,0.1)",
+          d: "13s",
+          del: "-6s",
+        },
+      ].map((n, i) => (
         <div
-          key={i}
+          key={`n${i}`}
+          className="g-nebula"
+          style={
+            {
+              width: n.w,
+              height: n.h,
+              top: n.top,
+              left: n.left,
+              background: n.bg,
+              "--d": n.d,
+              "--del": n.del,
+            } as any
+          }
+        />
+      ))}
+
+      {/* White stars */}
+      {Array.from({ length: 50 }).map((_, i) => (
+        <div
+          key={`ws${i}`}
           className="g-star"
           style={
             {
               left: `${(i * 17.3) % 100}%`,
               top: `${(i * 13.7) % 100}%`,
-              width: `${1 + (i % 3)}px`,
-              height: `${1 + (i % 3)}px`,
+              width: `${1 + (i % 2)}px`,
+              height: `${1 + (i % 2)}px`,
+              background: "white",
               "--d": `${1.5 + ((i * 0.4) % 3)}s`,
               "--del": `${-(i * 0.25) % 3}s`,
             } as any
           }
         />
       ))}
-      {Array.from({ length: 3 }).map((_, i) => (
+
+      {/* Purple/violet tinted stars */}
+      {Array.from({ length: 30 }).map((_, i) => (
         <div
-          key={`s${i}`}
-          className="g-shoot"
+          key={`ps${i}`}
+          className="g-star-purple"
           style={
             {
-              left: `${(i * 30) % 70}%`,
-              top: `${(i * 20) % 40}%`,
-              "--d": `${4 + i * 2}s`,
-              "--del": `${-(i * 3)}s`,
+              left: `${(i * 23.1) % 100}%`,
+              top: `${(i * 19.4) % 100}%`,
+              width: `${1 + (i % 3)}px`,
+              height: `${1 + (i % 3)}px`,
+              background: i % 2 === 0 ? "#c4b5fd" : "#a855f7",
+              boxShadow: `0 0 ${2 + (i % 3)}px #7c3aed`,
+              "--d": `${2 + ((i * 0.5) % 3)}s`,
+              "--del": `${-(i * 0.3) % 4}s`,
             } as any
           }
         />
       ))}
+
+      {/* Shooting stars */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={`sh${i}`}
+          className="g-shoot"
+          style={
+            {
+              left: `${(i * 18) % 65}%`,
+              top: `${(i * 15) % 45}%`,
+              width: "50px",
+              "--d": `${5 + i * 1.8}s`,
+              "--del": `${-(i * 2.5)}s`,
+            } as any
+          }
+        />
+      ))}
+
+      {/* Small planet + orbit dot */}
+      <div
+        className="g-planet"
+        style={
+          {
+            width: 18,
+            height: 18,
+            top: "18%",
+            left: "78%",
+            background: "radial-gradient(circle at 35% 35%, #c4b5fd, #7c3aed)",
+            boxShadow: "0 0 12px rgba(124,58,237,0.6)",
+            "--d": "6s",
+            "--del": "0s",
+          } as any
+        }
+      >
+        <div
+          className="g-orbit-dot"
+          style={
+            {
+              width: 5,
+              height: 5,
+              top: "50%",
+              left: "50%",
+              marginTop: -2.5,
+              marginLeft: -2.5,
+              background: "#e9d5ff",
+              boxShadow: "0 0 4px #e9d5ff",
+              "--d": "3s",
+              "--del": "0s",
+            } as any
+          }
+        />
+      </div>
+
+      {/* Tiny distant planet */}
+      <div
+        className="g-planet"
+        style={
+          {
+            width: 10,
+            height: 10,
+            top: "65%",
+            left: "88%",
+            background: "radial-gradient(circle at 35% 35%, #a855f7, #4c1d95)",
+            boxShadow: "0 0 8px rgba(168,85,247,0.5)",
+            "--d": "8s",
+            "--del": "-3s",
+          } as any
+        }
+      />
     </div>
   );
 }
@@ -476,37 +655,146 @@ function AuroraWaves() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <style>{`
-        @keyframes aw1 { 0%,100%{transform:translateX(-20%) scaleY(1);opacity:.25} 50%{transform:translateX(20%) scaleY(1.3);opacity:.45} }
-        @keyframes aw2 { 0%,100%{transform:translateX(15%) scaleY(.9);opacity:.2} 50%{transform:translateX(-15%) scaleY(1.2);opacity:.4} }
-        .aurora-band { position:absolute; width:200%; left:-50%; border-radius:9999px; filter:blur(40px); }
+        @keyframes aw1 {
+          0%,100% { transform: translateX(-20%) scaleY(1);   opacity: .2;  }
+          50%      { transform: translateX(20%)  scaleY(1.4); opacity: .42; }
+        }
+        @keyframes aw2 {
+          0%,100% { transform: translateX(15%)  scaleY(.85); opacity: .18; }
+          50%      { transform: translateX(-15%) scaleY(1.3); opacity: .38; }
+        }
+        @keyframes aw3 {
+          0%,100% { transform: translateX(-10%) scaleY(1.1); opacity: .15; }
+          50%      { transform: translateX(25%)  scaleY(.8);  opacity: .35; }
+        }
+        @keyframes auroraGlow {
+          0%,100% { opacity: 0.06; transform: scale(1);    }
+          50%      { opacity: 0.14; transform: scale(1.08); }
+        }
+        @keyframes starPop {
+          0%,100% { opacity: 0.1; transform: scale(0.8); }
+          50%      { opacity: 0.7; transform: scale(1.3); }
+        }
+        .aurora-band {
+          position: absolute; width: 200%; left: -50%;
+          border-radius: 9999px; filter: blur(45px);
+        }
+        .aurora-glow {
+          position: absolute; border-radius: 50%; filter: blur(60px);
+          animation: auroraGlow var(--d) var(--del) infinite ease-in-out;
+        }
+        .aurora-star {
+          position: absolute; border-radius: 50%; background: white;
+          animation: starPop var(--d) var(--del) infinite ease-in-out;
+        }
       `}</style>
-      <div
-        className="aurora-band"
-        style={{
-          height: "35%",
-          top: "10%",
-          background: "linear-gradient(90deg,#00ffcc,#00bfff,#7fffaa)",
-          animation: "aw1 6s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="aurora-band"
-        style={{
-          height: "30%",
-          top: "30%",
-          background: "linear-gradient(90deg,#00e5ff,#00ff88,#00ccff)",
-          animation: "aw2 8s ease-in-out infinite",
-        }}
-      />
-      <div
-        className="aurora-band"
-        style={{
-          height: "25%",
+
+      {/* Glow orbs */}
+      {[
+        {
+          w: 220,
+          h: 220,
+          top: "5%",
+          left: "10%",
+          bg: "rgba(13,148,136,0.2)",
+          d: "8s",
+          del: "0s",
+        },
+        {
+          w: 180,
+          h: 180,
           top: "50%",
-          background: "linear-gradient(90deg,#00ffaa,#00e5ff,#00ff99)",
-          animation: "aw1 10s ease-in-out infinite reverse",
+          left: "65%",
+          bg: "rgba(6,182,212,0.18)",
+          d: "10s",
+          del: "-4s",
+        },
+        {
+          w: 160,
+          h: 160,
+          top: "75%",
+          left: "15%",
+          bg: "rgba(52,211,153,0.15)",
+          d: "7s",
+          del: "-2s",
+        },
+      ].map((g, i) => (
+        <div
+          key={`ag${i}`}
+          className="aurora-glow"
+          style={
+            {
+              width: g.w,
+              height: g.h,
+              top: g.top,
+              left: g.left,
+              background: g.bg,
+              "--d": g.d,
+              "--del": g.del,
+            } as any
+          }
+        />
+      ))}
+
+      {/* Aurora bands */}
+      <div
+        className="aurora-band"
+        style={{
+          height: "32%",
+          top: "8%",
+          background:
+            "linear-gradient(90deg, #00ffcc, #00bfff, #7fffaa, #00e5cc)",
+          animation: "aw1 7s ease-in-out infinite",
         }}
       />
+      <div
+        className="aurora-band"
+        style={{
+          height: "28%",
+          top: "28%",
+          background:
+            "linear-gradient(90deg, #00e5ff, #00ff88, #06b6d4, #00ccff)",
+          animation: "aw2 9s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="aurora-band"
+        style={{
+          height: "24%",
+          top: "48%",
+          background:
+            "linear-gradient(90deg, #00ffaa, #5eead4, #00e5ff, #00ff99)",
+          animation: "aw1 11s ease-in-out infinite reverse",
+        }}
+      />
+      <div
+        className="aurora-band"
+        style={{
+          height: "18%",
+          top: "65%",
+          background:
+            "linear-gradient(90deg, #06b6d4, #00ffcc, #0d9488, #00bfff)",
+          animation: "aw3 13s ease-in-out infinite",
+        }}
+      />
+
+      {/* Faint stars */}
+      {Array.from({ length: 25 }).map((_, i) => (
+        <div
+          key={`as${i}`}
+          className="aurora-star"
+          style={
+            {
+              left: `${(i * 19.3) % 100}%`,
+              top: `${(i * 11.7) % 100}%`,
+              width: `${1 + (i % 2)}px`,
+              height: `${1 + (i % 2)}px`,
+              "--d": `${2 + ((i * 0.5) % 3)}s`,
+              "--del": `${-(i * 0.3) % 4}s`,
+            } as any
+          }
+        />
+      ))}
     </div>
   );
 }
