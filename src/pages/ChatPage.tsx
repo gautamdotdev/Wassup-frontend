@@ -343,11 +343,11 @@ const ChatPage = () => {
         boxShadow: "0 10px 40px -10px rgba(0,0,0,0.3)",
       }
     : {
-        background: `${themeDef.hex}F2`,
+        background: themeDef.msgMenuBg,
         backdropFilter: "blur(30px) saturate(180%)",
         WebkitBackdropFilter: "blur(30px) saturate(180%)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.25)",
+        border: `1px solid ${themeDef.msgMenuBorder}`,
+        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.4)",
       };
 
   const dropdownBg = {
@@ -1431,7 +1431,7 @@ const ChatPage = () => {
   const headerBgStyle: React.CSSProperties = isDefault
     ? {}
     : {
-        backgroundColor: `${themeDef.hex}`,
+        background: themeDef.headerBg,
         borderBottom: "1px solid rgba(255,255,255,0.1)",
       };
 
@@ -1439,7 +1439,7 @@ const ChatPage = () => {
   const bottomGradientStyle: React.CSSProperties = isDefault
     ? {}
     : {
-        background: `linear-gradient(to top, ${themeDef.hex} 0%, ${themeDef.hex}F2 70%, transparent 100%)`,
+        background: themeDef.bottomBg,
       };
 
   // Typing indicator bg

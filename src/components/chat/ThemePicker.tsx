@@ -24,6 +24,10 @@ export interface ThemeDef {
   badge?: string;
   chatBg: string;
   hex: string;
+  headerBg: string;
+  bottomBg: string;
+  msgMenuBg: string;
+  msgMenuBorder: string;
   myBubble: string;
   myBubbleText: string;
   otherBubble: string;
@@ -40,7 +44,11 @@ export const THEMES: ThemeDef[] = [
     id: "default",
     label: "Default",
     chatBg: "",
-    hex: "#ffffff", // Default baseline
+    hex: "#ffffff",
+    headerBg: "",
+    bottomBg: "",
+    msgMenuBg: "",
+    msgMenuBorder: "",
     myBubble: "",
     myBubbleText: "",
     otherBubble: "",
@@ -55,6 +63,10 @@ export const THEMES: ThemeDef[] = [
     label: "Monochrome",
     chatBg: "#0d0d0d",
     hex: "#0d0d0d",
+    headerBg: "#0d0d0d",
+    bottomBg: "#0d0d0d",
+    msgMenuBg: "rgba(28,28,28,0.95)",
+    msgMenuBorder: "rgba(255,255,255,0.08)",
     myBubble: "#3a3a3a",
     myBubbleText: "#ffffff",
     otherBubble: "#1e1e1e",
@@ -69,6 +81,10 @@ export const THEMES: ThemeDef[] = [
     label: "Ocean",
     chatBg: "linear-gradient(160deg, #0a1628 0%, #0a2a4a 50%, #0a1628 100%)",
     hex: "#0a1628",
+    headerBg: "#0a1628",
+    bottomBg: "#0a1628",
+    msgMenuBg: "rgba(10,26,40,0.95)",
+    msgMenuBorder: "rgba(147,197,253,0.15)",
     myBubble: "#0066cc",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(10,42,74,0.85)",
@@ -83,6 +99,10 @@ export const THEMES: ThemeDef[] = [
     label: "Forest",
     chatBg: "linear-gradient(160deg, #0d1f0d 0%, #1a3a1a 60%, #0d1f0d 100%)",
     hex: "#0d1f0d",
+    headerBg: "#0d1f0d",
+    bottomBg: "#0d1f0d",
+    msgMenuBg: "rgba(13,31,13,0.95)",
+    msgMenuBorder: "rgba(134,239,172,0.15)",
     myBubble: "#2d7a2d",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(26,58,26,0.85)",
@@ -97,6 +117,10 @@ export const THEMES: ThemeDef[] = [
     label: "Sunset",
     chatBg: "linear-gradient(160deg, #1a0a00 0%, #2d1000 50%, #1a0500 100%)",
     hex: "#1a0a00",
+    headerBg: "#1a0a00",
+    bottomBg: "#1a0a00",
+    msgMenuBg: "rgba(26,10,0,0.95)",
+    msgMenuBorder: "rgba(253,186,116,0.15)",
     myBubble: "#e85d04",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(42,18,0,0.85)",
@@ -111,6 +135,10 @@ export const THEMES: ThemeDef[] = [
     label: "Lavender",
     chatBg: "linear-gradient(160deg, #13001f 0%, #1e0033 60%, #130020 100%)",
     hex: "#13001f",
+    headerBg: "#13001f",
+    bottomBg: "#13001f",
+    msgMenuBg: "rgba(19,0,31,0.95)",
+    msgMenuBorder: "rgba(196,181,253,0.15)",
     myBubble: "#8b5cf6",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(34,0,51,0.85)",
@@ -125,6 +153,10 @@ export const THEMES: ThemeDef[] = [
     label: "Midnight",
     chatBg: "linear-gradient(160deg, #020c1b 0%, #060f2e 60%, #020c1b 100%)",
     hex: "#020c1b",
+    headerBg: "#020c1b",
+    bottomBg: "#020c1b",
+    msgMenuBg: "rgba(2,12,27,0.95)",
+    msgMenuBorder: "rgba(147,197,253,0.15)",
     myBubble: "#1d4ed8",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(6,15,46,0.85)",
@@ -139,6 +171,10 @@ export const THEMES: ThemeDef[] = [
     label: "Rose",
     chatBg: "linear-gradient(160deg, #1f0010 0%, #280010 60%, #1f0010 100%)",
     hex: "#1f0010",
+    headerBg: "#1f0010",
+    bottomBg: "#1f0010",
+    msgMenuBg: "rgba(31,0,16,0.95)",
+    msgMenuBorder: "rgba(253,164,175,0.15)",
     myBubble: "#e11d48",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(40,0,16,0.85)",
@@ -154,6 +190,11 @@ export const THEMES: ThemeDef[] = [
     badge: "Animated",
     chatBg: "linear-gradient(160deg, #4a0072 0%, #8b0057 50%, #4a0072 100%)",
     hex: "#4a0072",
+    headerBg: "linear-gradient(135deg, #3a005a 0%, #6e0044 100%)",
+    bottomBg:
+      "linear-gradient(to top, #3a005a 0%, #6e004480 60%, transparent 100%)",
+    msgMenuBg: "rgba(74,0,114,0.92)",
+    msgMenuBorder: "rgba(255,105,180,0.25)",
     myBubble: "#ff1f8e",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(80,0,80,0.7)",
@@ -169,6 +210,10 @@ export const THEMES: ThemeDef[] = [
     label: "Flirt",
     chatBg: "linear-gradient(160deg, #3b0a4f 0%, #5c1040 60%, #3b0a4f 100%)",
     hex: "#3b0a4f",
+    headerBg: "#3b0a4f",
+    bottomBg: "#3b0a4f",
+    msgMenuBg: "rgba(59,10,79,0.95)",
+    msgMenuBorder: "rgba(244,114,182,0.2)",
     myBubble: "#f9a8d4",
     myBubbleText: "#3b0a4f",
     otherBubble: "rgba(70,10,90,0.75)",
@@ -183,6 +228,10 @@ export const THEMES: ThemeDef[] = [
     label: "Basketball",
     chatBg: "#1a1a1a",
     hex: "#1a1a1a",
+    headerBg: "#1a1a1a",
+    bottomBg: "#1a1a1a",
+    msgMenuBg: "rgba(26,26,26,0.95)",
+    msgMenuBorder: "rgba(255,255,255,0.08)",
     myBubble: "#2a3a2a",
     myBubbleText: "#e5e7eb",
     otherBubble: "rgba(31,42,31,0.9)",
@@ -198,6 +247,10 @@ export const THEMES: ThemeDef[] = [
     badge: "Animated",
     chatBg: "linear-gradient(135deg, #0a0015 0%, #120025 40%, #050010 100%)",
     hex: "#0a0015",
+    headerBg: "#0a0015",
+    bottomBg: "#0a0015",
+    msgMenuBg: "rgba(10,0,21,0.95)",
+    msgMenuBorder: "rgba(233,213,255,0.15)",
     myBubble: "#7c3aed",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(20,0,40,0.8)",
@@ -214,6 +267,10 @@ export const THEMES: ThemeDef[] = [
     badge: "Animated",
     chatBg: "linear-gradient(160deg, #001a1a 0%, #001520 60%, #001a1a 100%)",
     hex: "#001a1a",
+    headerBg: "#001a1a",
+    bottomBg: "#001a1a",
+    msgMenuBg: "rgba(0,26,26,0.95)",
+    msgMenuBorder: "rgba(94,234,212,0.15)",
     myBubble: "#0d9488",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(0,30,30,0.8)",
@@ -229,6 +286,10 @@ export const THEMES: ThemeDef[] = [
     label: "Cherry",
     chatBg: "linear-gradient(160deg, #1a0010 0%, #2a0018 60%, #1a0010 100%)",
     hex: "#1a0010",
+    headerBg: "#1a0010",
+    bottomBg: "#1a0010",
+    msgMenuBg: "rgba(26,0,16,0.95)",
+    msgMenuBorder: "rgba(253,164,175,0.15)",
     myBubble: "#be123c",
     myBubbleText: "#ffffff",
     otherBubble: "rgba(42,0,24,0.85)",
@@ -252,12 +313,46 @@ function LoveParticles() {
           90%  { opacity: var(--op); }
           100% { transform: translateY(-110vh) scale(var(--s)) rotate(calc(var(--r) + 30deg)); opacity: 0; }
         }
+        @keyframes lovePulse {
+          0%,100% { transform: scale(1); opacity: 0.06; }
+          50%      { transform: scale(1.08); opacity: 0.12; }
+        }
         .love-heart {
           position: absolute; bottom: -60px;
           animation: floatHeart var(--dur) var(--delay) infinite ease-in-out;
           font-size: var(--fsize); user-select: none;
         }
+        .love-glow {
+          position: absolute; border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,31,142,0.35) 0%, transparent 70%);
+          animation: lovePulse var(--dur) var(--delay) infinite ease-in-out;
+        }
       `}</style>
+
+      {/* Glow orbs */}
+      {[
+        { w: 300, h: 300, top: "10%", left: "-10%", dur: "6s", del: "0s" },
+        { w: 250, h: 250, top: "50%", right: "-8%", dur: "8s", del: "-3s" },
+        { w: 200, h: 200, top: "75%", left: "20%", dur: "7s", del: "-5s" },
+      ].map((g, i) => (
+        <div
+          key={`g${i}`}
+          className="love-glow"
+          style={
+            {
+              width: g.w,
+              height: g.h,
+              top: g.top,
+              left: (g as any).left ?? undefined,
+              right: (g as any).right ?? undefined,
+              "--dur": g.dur,
+              "--delay": g.del,
+            } as any
+          }
+        />
+      ))}
+
+      {/* Floating hearts */}
       {Array.from({ length: 18 }).map((_, i) => {
         const emojis = ["❤️", "💕", "💗", "💓", "🩷", "💖", "💝", "💘"];
         return (
@@ -272,7 +367,7 @@ function LoveParticles() {
                 "--fsize": `${16 + ((i * 7) % 24)}px`,
                 "--r": `${-15 + ((i * 11) % 30)}deg`,
                 "--s": `${0.8 + ((i * 0.1) % 0.6)}`,
-                "--op": `${0.4 + ((i * 0.06) % 0.5)}`,
+                "--op": `${0.55 + ((i * 0.06) % 0.35)}`,
               } as any
             }
           >
@@ -532,7 +627,6 @@ export function ThemePicker({
 
   const openPreview = (id: ChatTheme) => setPreviewing(id);
   const closePreview = () => setPreviewing(null);
-
   const handleSelect = () => {
     if (previewing) onSelect(previewing);
   };
@@ -544,9 +638,9 @@ export function ThemePicker({
       onClick={previewing ? undefined : onClose}
     >
       <style>{`
-        @keyframes slideUpPicker { from{opacity:0;transform:translateY(80px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes previewSlideIn { from{opacity:0;transform:translateY(30px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-        @keyframes msgPop { from{opacity:0;transform:translateY(12px) scale(0.94)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes slideUpPicker   { from{opacity:0;transform:translateY(80px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes previewSlideIn  { from{opacity:0;transform:translateY(30px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes msgPop          { from{opacity:0;transform:translateY(12px) scale(0.94)} to{opacity:1;transform:translateY(0) scale(1)} }
       `}</style>
 
       {/* ── GRID ── */}
@@ -580,7 +674,6 @@ export function ThemePicker({
           <p className="text-[12px] text-muted-foreground px-6 pb-4">
             Tap any theme to preview it
           </p>
-
           <div className="px-4 pb-8 grid grid-cols-4 gap-3">
             {THEMES.map((t) => {
               const isActive = currentTheme === t.id;
@@ -591,11 +684,7 @@ export function ThemePicker({
                   className="flex flex-col items-center gap-1.5 group"
                 >
                   <div
-                    className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 relative ${
-                      isActive
-                        ? "border-primary scale-105"
-                        : "border-transparent group-hover:border-white/20 group-hover:scale-[1.02]"
-                    }`}
+                    className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 relative ${isActive ? "border-primary scale-105" : "border-transparent group-hover:border-white/20 group-hover:scale-[1.02]"}`}
                     style={{ aspectRatio: "3/4", background: t.thumbBg }}
                   >
                     <div className="absolute inset-0 flex flex-col justify-end p-1.5 gap-1">
@@ -665,10 +754,8 @@ export function ThemePicker({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Animated bg layer */}
           <AnimatedBg themeId={previewTheme.id} />
 
-          {/* Top bar */}
           <div
             className="relative z-10 flex items-center gap-3 px-4 pt-12 pb-4 shrink-0"
             style={{
@@ -701,7 +788,6 @@ export function ThemePicker({
             </div>
           </div>
 
-          {/* Theme name */}
           <div className="relative z-10 text-center py-4 shrink-0">
             <p
               className="font-bold text-[18px]"
@@ -723,7 +809,6 @@ export function ThemePicker({
             )}
           </div>
 
-          {/* Messages */}
           <div className="relative z-10 flex-1 flex flex-col justify-end px-4 pb-3 gap-3 overflow-hidden">
             {PREVIEW_MESSAGES.map((m, i) => {
               const isDefault = previewTheme.id === "default";
@@ -775,7 +860,6 @@ export function ThemePicker({
                 </div>
               );
             })}
-            {/* Date separator */}
             <div className="text-center py-1">
               <span
                 className="text-[11px] px-3 py-1 rounded-full"
@@ -795,7 +879,6 @@ export function ThemePicker({
             </div>
           </div>
 
-          {/* Cancel / Select bar */}
           <div
             className="relative z-10 flex gap-3 px-4 pb-10 pt-4 shrink-0"
             style={{
@@ -848,6 +931,10 @@ export function getThemeStyles(theme: ChatTheme) {
     otherBubbleText: t.otherBubbleText,
     chatBg: t.chatBg,
     hex: t.hex,
+    headerBg: t.headerBg,
+    bottomBg: t.bottomBg,
+    msgMenuBg: t.msgMenuBg,
+    msgMenuBorder: t.msgMenuBorder,
     mutedText: t.mutedText,
     animated: !!t.animated,
   };
