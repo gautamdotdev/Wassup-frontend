@@ -65,7 +65,7 @@ const EditProfilePage = () => {
           />
           <button
             onClick={() => toast.info("Photo upload coming soon!")}
-            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center border-2 border-background shadow"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#20a752] flex items-center justify-center border-2 border-background shadow"
           >
             <Camera size={14} className="text-white" />
           </button>

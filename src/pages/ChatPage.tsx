@@ -1,10 +1,29 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, Phone, Video, MoreVertical, X, BellOff, Bell,
-  Search, Image, Palette, ChevronRight, ChevronDown,
-  Ban, Trash2, Download, Flag, Reply, Copy,
-  Forward, Info, Plus, ChevronUp, Pencil,
+  ArrowLeft,
+  Phone,
+  Video,
+  MoreVertical,
+  X,
+  BellOff,
+  Bell,
+  Search,
+  Image,
+  Palette,
+  ChevronRight,
+  ChevronDown,
+  Ban,
+  Trash2,
+  Download,
+  Flag,
+  Reply,
+  Copy,
+  Forward,
+  Info,
+  Plus,
+  ChevronUp,
+  Pencil,
 } from "lucide-react";
 import { FaPencilAlt } from "react-icons/fa";
 import { FiPlus, FiCamera, FiSend } from "react-icons/fi";
@@ -24,7 +43,12 @@ import { AttachmentPanel } from "@/components/chat/AttachmentPanel";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { useQuickReactions } from "@/hooks/useQuickReactions";
 import { ConfirmModal } from "@/components/chat/ConfirmModal";
-import { ThemePicker, ChatTheme, THEMES } from "@/components/chat/ThemePicker";
+import {
+  ThemePicker,
+  ChatTheme,
+  THEMES,
+  AnimatedBg,
+} from "@/components/chat/ThemePicker";
 import { LockScreen } from "@/components/chat/LockScreen";
 import { MediaRenderer } from "@/components/chat/MediaRenderer";
 import { Chat, User } from "@/types/chat";
@@ -33,126 +57,21 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 type MsgMenu = { msgId: string; x: number; y: number; msg: Msg } | null;
 type ConfirmType = "block" | "clear" | null;
 type UploadStatus = "idle" | "uploading" | "done" | "error";
-interface SearchHit { _id: string; text: string; createdAt: string }
-
-// ── Animated background (same components as ThemePicker, re-exported here) ──
-
-function LoveParticles() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <style>{`
-        @keyframes floatHeartChat {
-          0%   { transform: translateY(0) scale(1) rotate(var(--r)); opacity: 0; }
-          10%  { opacity: var(--op); }
-          90%  { opacity: var(--op); }
-          100% { transform: translateY(-110vh) scale(var(--s)) rotate(calc(var(--r)+30deg)); opacity: 0; }
-        }
-        .love-heart-chat {
-          position:absolute; bottom:-60px;
-          animation: floatHeartChat var(--dur) var(--delay) infinite ease-in-out;
-          font-size: var(--fsize); user-select: none; max-width:430px;
-        }
-      `}</style>
-      {Array.from({ length: 14 }).map((_, i) => {
-        const emojis = ["❤️", "💕", "💗", "💓", "🩷", "💖", "💝", "💘"];
-        return (
-          <span key={i} className="love-heart-chat" style={{
-            left: `${5 + (i * 6.5) % 88}%`,
-            "--dur": `${7 + (i * 1.5) % 8}s`,
-            "--delay": `${-(i * 0.9) % 8}s`,
-            "--fsize": `${14 + (i * 8) % 22}px`,
-            "--r": `${-15 + (i * 12) % 30}deg`,
-            "--s": `${0.8 + (i * 0.1) % 0.5}`,
-            "--op": `${0.25 + (i * 0.05) % 0.35}`,
-          } as any}>{emojis[i % emojis.length]}</span>
-        );
-      })}
-    </div>
-  );
-}
-
-function GalaxyStars() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <style>{`
-        @keyframes twinkleChat { 0%,100%{opacity:.1;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
-        .gc-star { position:absolute; border-radius:50%; background:white; animation:twinkleChat var(--d) var(--del) infinite; }
-      `}</style>
-      {Array.from({ length: 55 }).map((_, i) => (
-        <div key={i} className="gc-star" style={{
-          left: `${(i * 17.3) % 100}%`, top: `${(i * 13.7) % 100}%`,
-          width: `${1 + (i % 3)}px`, height: `${1 + (i % 3)}px`,
-          "--d": `${1.5 + (i * 0.4) % 3}s`, "--del": `${-(i * 0.25) % 3}s`,
-        } as any} />
-      ))}
-    </div>
-  );
-}
-
-function AuroraWaves() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <style>{`
-        @keyframes aw1c { 0%,100%{transform:translateX(-20%) scaleY(1);opacity:.2} 50%{transform:translateX(20%) scaleY(1.3);opacity:.35} }
-        @keyframes aw2c { 0%,100%{transform:translateX(15%) scaleY(.9);opacity:.15} 50%{transform:translateX(-15%) scaleY(1.2);opacity:.3} }
-        .aurora-band-c { position:absolute; width:200%; left:-50%; border-radius:9999px; filter:blur(40px); }
-      `}</style>
-      <div className="aurora-band-c" style={{ height: "35%", top: "10%", background: "linear-gradient(90deg,#00ffcc,#00bfff,#7fffaa)", animation: "aw1c 6s ease-in-out infinite" }} />
-      <div className="aurora-band-c" style={{ height: "30%", top: "30%", background: "linear-gradient(90deg,#00e5ff,#00ff88,#00ccff)", animation: "aw2c 8s ease-in-out infinite" }} />
-      <div className="aurora-band-c" style={{ height: "25%", top: "50%", background: "linear-gradient(90deg,#00ffaa,#00e5ff)", animation: "aw1c 10s ease-in-out infinite reverse" }} />
-    </div>
-  );
-}
-
-function FlirtBlobs() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <style>{`
-        @keyframes fbChat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-18px) scale(1.06)} }
-        .fb-blob { position:absolute; border-radius:50%; filter:blur(50px); }
-      `}</style>
-      {[
-        { w: 160, h: 160, top: "8%", left: "-5%", bg: "rgba(244,114,182,0.2)", dur: "7s", del: "0s" },
-        { w: 120, h: 120, top: "55%", left: "8%", bg: "rgba(192,38,211,0.15)", dur: "9s", del: "-3s" },
-        { w: 200, h: 200, top: "28%", right: "-8%", bg: "rgba(244,114,182,0.15)", dur: "11s", del: "-5s" },
-      ].map((b, i) => (
-        <div key={i} className="fb-blob" style={{
-          width: b.w, height: b.h, top: b.top,
-          left: b.left ?? undefined, right: (b as any).right ?? undefined,
-          background: b.bg, animation: `fbChat ${b.dur} ${b.del} infinite ease-in-out`,
-        }} />
-      ))}
-    </div>
-  );
-}
-
-function BasketballBg() {
-  return (
-    <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.06 }}>
-      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50%" cy="45%" r="100" fill="none" stroke="#fff" strokeWidth="1.5" />
-        <circle cx="50%" cy="45%" r="24" fill="none" stroke="#fff" strokeWidth="1.5" />
-        <line x1="0" y1="45%" x2="100%" y2="45%" stroke="#fff" strokeWidth="1" strokeDasharray="6 6" />
-      </svg>
-    </div>
-  );
-}
-
-function ChatAnimatedBg({ themeId }: { themeId: ChatTheme }) {
-  if (themeId === "love") return <LoveParticles />;
-  if (themeId === "galaxy") return <GalaxyStars />;
-  if (themeId === "aurora") return <AuroraWaves />;
-  if (themeId === "basketball") return <BasketballBg />;
-  if (themeId === "flirt") return <FlirtBlobs />;
-  return null;
+interface SearchHit {
+  _id: string;
+  text: string;
+  createdAt: string;
 }
 
 // ── Pending preview ──────────────────────────────────────────────────────────
 
 const PendingPreviewImg = ({ url }: { url: string }) => {
   const { url: converted, loading } = useMediaUrl(url);
-  if (loading) return <div className="w-16 h-16 bg-secondary rounded-xl animate-pulse" />;
-  return <img src={converted} className="w-16 h-16 object-cover rounded-xl" alt="" />;
+  if (loading)
+    return <div className="w-16 h-16 bg-secondary rounded-xl animate-pulse" />;
+  return (
+    <img src={converted} className="w-16 h-16 object-cover rounded-xl" alt="" />
+  );
 };
 
 // ── ChatPage ─────────────────────────────────────────────────────────────────
@@ -199,8 +118,13 @@ const ChatPage = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Msg | null>(null);
   const [showAttachPanel, setShowAttachPanel] = useState(false);
-  const [pendingImages, setPendingImages] = useState<{ url: string; file?: File }[]>([]);
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [pendingImages, setPendingImages] = useState<
+    { url: string; file?: File }[]
+  >([]);
+  const [lightbox, setLightbox] = useState<{
+    images: string[];
+    index: number;
+  } | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [showMenu, setShowMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -222,27 +146,36 @@ const ChatPage = () => {
     const updateLayout = () => {
       // Force window to top to prevent browser auto-scroll from hiding the header
       window.scrollTo(0, 0);
-      document.documentElement.style.setProperty('--vh', `${vv.height}px`);
-      document.documentElement.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+      document.documentElement.style.setProperty("--vh", `${vv.height}px`);
+      document.documentElement.style.setProperty(
+        "--vv-top",
+        `${vv.offsetTop}px`,
+      );
 
       if (isAtBottomRef.current) {
         setTimeout(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+          bottomRef.current?.scrollIntoView({
+            behavior: "instant" as ScrollBehavior,
+          });
         }, 50);
       }
     };
-    vv.addEventListener('resize', updateLayout);
-    vv.addEventListener('scroll', updateLayout);
+    vv.addEventListener("resize", updateLayout);
+    vv.addEventListener("scroll", updateLayout);
     updateLayout();
     return () => {
-      vv.removeEventListener('resize', updateLayout);
-      vv.removeEventListener('scroll', updateLayout);
+      vv.removeEventListener("resize", updateLayout);
+      vv.removeEventListener("scroll", updateLayout);
     };
   }, []);
-  const [showLockScreen, setShowLockScreen] = useState<"verify" | "set" | null>(null);
+  const [showLockScreen, setShowLockScreen] = useState<"verify" | "set" | null>(
+    null,
+  );
   const [msgInfoOpen, setMsgInfoOpen] = useState<Msg | null>(null);
   const { quickReactions, replaceReaction } = useQuickReactions();
-  const [emojiPickerMode, setEmojiPickerMode] = useState<"react" | { replaceIndex: number } | null>(null);
+  const [emojiPickerMode, setEmojiPickerMode] = useState<
+    "react" | { replaceIndex: number } | null
+  >(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [unreadWhileAway, setUnreadWhileAway] = useState(0);
   const [msgMenu, setMsgMenu] = useState<MsgMenu>(null);
@@ -252,7 +185,8 @@ const ChatPage = () => {
   const [editingMsg, setEditingMsg] = useState<Msg | null>(null);
 
   const fetchMoreMessages = useCallback(async () => {
-    if (loadingMore || !hasMore || !currentChat || messages.length === 0) return;
+    if (loadingMore || !hasMore || !currentChat || messages.length === 0)
+      return;
     setLoadingMore(true);
 
     // Save current scroll height to restore later
@@ -261,7 +195,7 @@ const ChatPage = () => {
     try {
       const oldestMsg = messages[0];
       const { data } = await api.get(`/messages/${currentChat._id}`, {
-        params: { cursor: oldestMsg.createdAt, limit: 30 }
+        params: { cursor: oldestMsg.createdAt, limit: 30 },
       });
 
       if (data.length < 30) setHasMore(false);
@@ -273,18 +207,28 @@ const ChatPage = () => {
         let replyTo: Msg["replyTo"] | undefined;
         if (m.replyTo) {
           const rtId = m.replyTo.senderId?._id || m.replyTo.senderId;
-          replyTo = { id: m.replyTo._id, senderId: rtId === myId ? "me" : "other", text: m.replyTo.text || "Voice message" };
+          replyTo = {
+            id: m.replyTo._id,
+            senderId: rtId === myId ? "me" : "other",
+            text: m.replyTo.text || "Voice message",
+          };
         }
         return {
-          id: m._id, senderId: isMe ? "me" : "other",
+          id: m._id,
+          senderId: isMe ? "me" : "other",
           sender: m.senderId,
           text: m.text,
-          timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          }),
           status: isMe ? (m.tickStatus ?? "sent") : undefined,
           readBy: m.readBy || [],
           reactions: m.reactions || [],
           ...(replyTo ? { replyTo } : {}),
-          ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+          ...(m.mediaUrl
+            ? { images: [m.mediaUrl], mediaType: m.mediaType }
+            : {}),
           isSystem: m.isSystem,
           isEdited: m.isEdited,
           createdAt: m.createdAt,
@@ -292,9 +236,9 @@ const ChatPage = () => {
       });
 
       if (mapped.length > 0) {
-        setMessages(prev => {
-          const ids = new Set(prev.map(m => m.id));
-          const filtered = mapped.filter(m => !ids.has(m.id));
+        setMessages((prev) => {
+          const ids = new Set(prev.map((m) => m.id));
+          const filtered = mapped.filter((m) => !ids.has(m.id));
           if (filtered.length === 0) return prev;
           const next = [...filtered, ...prev];
           prevMsgCountRef.current = next.length;
@@ -304,12 +248,13 @@ const ChatPage = () => {
         // Restore scroll position
         setTimeout(() => {
           if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight - oldScrollHeight;
+            scrollRef.current.scrollTop =
+              scrollRef.current.scrollHeight - oldScrollHeight;
           }
         }, 50);
       }
       // Cooldown to prevent rapid loops
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 400));
     } catch (err) {
       console.error("Failed to fetch more messages", err);
     } finally {
@@ -320,7 +265,7 @@ const ChatPage = () => {
   useEffect(() => {
     const onFocus = () => {
       if (currentChat?._id) {
-        api.post(`/messages/read/${currentChat._id}`).catch(() => { });
+        api.post(`/messages/read/${currentChat._id}`).catch(() => {});
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       }
     };
@@ -340,30 +285,50 @@ const ChatPage = () => {
   const [groupData, setGroupData] = useState<Chat | null>(null);
 
   // ── Resolve theme colors ──
-  const themeDef = THEMES.find(t => t.id === chatTheme) || THEMES[0];
+  const themeDef = THEMES.find((t) => t.id === chatTheme) || THEMES[0];
   const isDefault = chatTheme === "default";
 
   const isEffectiveDark = isDark || !isDefault;
 
   // Glassmorphism pill for input bar
   const pill = isEffectiveDark
-    ? { background: "rgba(20,20,20,0.82)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset" }
-    : { background: "rgba(255,255,255,0.90)", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset" };
-  const blurStyle = { ...pill, backdropFilter: "blur(24px) saturate(180%)", WebkitBackdropFilter: "blur(24px) saturate(180%)" };
+    ? {
+        background: "rgba(20,20,20,0.82)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow:
+          "0 8px 32px rgba(0,0,0,0.55),0 1px 0 rgba(255,255,255,0.06) inset",
+      }
+    : {
+        background: "rgba(255,255,255,0.90)",
+        border: "1px solid rgba(0,0,0,0.08)",
+        boxShadow:
+          "0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,0.9) inset",
+      };
+  const blurStyle = {
+    ...pill,
+    backdropFilter: "blur(24px) saturate(180%)",
+    WebkitBackdropFilter: "blur(24px) saturate(180%)",
+  };
 
   // Theme-tinted input pill (more opaque for legibility)
-  const inputPillStyle = isDefault ? blurStyle : {
-    background: `${themeDef.hex}F2`,
-    border: "1px solid rgba(255,255,255,0.15)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-    backdropFilter: "blur(25px) saturate(160%)",
-    WebkitBackdropFilter: "blur(25px) saturate(160%)",
-  };
+  const inputPillStyle = isDefault
+    ? blurStyle
+    : {
+        background: `${themeDef.hex}F2`,
+        border: "1px solid rgba(255,255,255,0.15)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+        backdropFilter: "blur(25px) saturate(160%)",
+        WebkitBackdropFilter: "blur(25px) saturate(160%)",
+      };
 
   const sheetBg = {
     background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-    border: isEffectiveDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
-    boxShadow: isEffectiveDark ? "0 -10px 40px rgba(0,0,0,0.3)" : "0 -10px 40px rgba(0,0,0,0.06)",
+    border: isEffectiveDark
+      ? "1px solid rgba(255,255,255,0.08)"
+      : "1px solid rgba(0,0,0,0.06)",
+    boxShadow: isEffectiveDark
+      ? "0 -10px 40px rgba(0,0,0,0.3)"
+      : "0 -10px 40px rgba(0,0,0,0.06)",
     animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
   };
 
@@ -372,7 +337,9 @@ const ChatPage = () => {
         background: isDark ? "rgba(28,28,28,0.85)" : "rgba(255,255,255,0.92)",
         backdropFilter: "blur(32px) saturate(180%)",
         WebkitBackdropFilter: "blur(32px) saturate(180%)",
-        border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)",
+        border: isDark
+          ? "1px solid rgba(255,255,255,0.12)"
+          : "1px solid rgba(0,0,0,0.1)",
         boxShadow: "0 10px 40px -10px rgba(0,0,0,0.3)",
       }
     : {
@@ -385,19 +352,25 @@ const ChatPage = () => {
 
   const dropdownBg = {
     background: isEffectiveDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-    border: isEffectiveDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)",
-    boxShadow: isEffectiveDark 
-      ? "0 4px 20px rgba(0,0,0,0.4)" 
+    border: isEffectiveDark
+      ? "1px solid rgba(255,255,255,0.1)"
+      : "1px solid rgba(0,0,0,0.08)",
+    boxShadow: isEffectiveDark
+      ? "0 4px 20px rgba(0,0,0,0.4)"
       : "0 4px 20px rgba(0,0,0,0.08)",
   };
 
   const menuTextClass = !isDefault ? "text-white" : "text-foreground";
   const menuMutedClass = !isDefault ? "text-white/60" : "text-muted-foreground";
-  const menuHoverClass = !isDefault ? "hover:bg-white/10" : "hover:bg-foreground/[0.04]";
+  const menuHoverClass = !isDefault
+    ? "hover:bg-white/10"
+    : "hover:bg-foreground/[0.04]";
   const menuBorderClass = !isDefault ? "border-white/10" : "border-border/30";
 
-
-  const closeMsgMenu = useCallback(() => { setMsgMenu(null); setEmojiPickerMode(null); }, []);
+  const closeMsgMenu = useCallback(() => {
+    setMsgMenu(null);
+    setEmojiPickerMode(null);
+  }, []);
 
   useEffect(() => {
     const block = (e: MouseEvent) => e.preventDefault();
@@ -409,11 +382,16 @@ const ChatPage = () => {
     if (!topSentinelRef.current) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && hasMore && messages.length > 0) {
+        if (
+          entries[0].isIntersecting &&
+          !loadingMore &&
+          hasMore &&
+          messages.length > 0
+        ) {
           fetchMoreMessages();
         }
       },
-      { threshold: 0, rootMargin: "150px 0px 0px 0px" }
+      { threshold: 0, rootMargin: "150px 0px 0px 0px" },
     );
     observer.observe(topSentinelRef.current);
     return () => observer.disconnect();
@@ -445,59 +423,104 @@ const ChatPage = () => {
 
   useEffect(() => {
     const fn = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) { setShowMenu(false); setShowMoreMenu(false); }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+        setShowMoreMenu(false);
+      }
       if (emojiPickerMode !== null) return;
-      if (msgMenuRef.current && !msgMenuRef.current.contains(e.target as Node)) closeMsgMenu();
+      if (msgMenuRef.current && !msgMenuRef.current.contains(e.target as Node))
+        closeMsgMenu();
     };
     document.addEventListener("mousedown", fn);
     return () => document.removeEventListener("mousedown", fn);
   }, [emojiPickerMode, closeMsgMenu]);
 
-  const startLongPress = useCallback((msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
-    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    lpStartX.current = clientX; lpStartY.current = clientY;
-    longPressTimer.current = setTimeout(() => {
-      if (navigator.vibrate) navigator.vibrate(30);
-      setMsgMenu({ msgId: msg.id, x: clientX, y: clientY, msg });
-    }, 450);
-  }, []);
+  const startLongPress = useCallback(
+    (msg: Msg, e: React.TouchEvent | React.MouseEvent) => {
+      const clientX =
+        "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+      const clientY =
+        "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+      lpStartX.current = clientX;
+      lpStartY.current = clientY;
+      longPressTimer.current = setTimeout(() => {
+        if (navigator.vibrate) navigator.vibrate(30);
+        setMsgMenu({ msgId: msg.id, x: clientX, y: clientY, msg });
+      }, 450);
+    },
+    [],
+  );
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   }, []);
 
-  const moveLongPress = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    const x = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-    const y = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-    if (Math.abs(x - lpStartX.current) > 10 || Math.abs(y - lpStartY.current) > 10) cancelLongPress();
-  }, [cancelLongPress]);
+  const moveLongPress = useCallback(
+    (e: React.TouchEvent | React.MouseEvent) => {
+      const x =
+        "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+      const y =
+        "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+      if (
+        Math.abs(x - lpStartX.current) > 10 ||
+        Math.abs(y - lpStartY.current) > 10
+      )
+        cancelLongPress();
+    },
+    [cancelLongPress],
+  );
 
   const handleQuickCameraPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    Promise.all(files.map(f => new Promise<{ url: string; file: File }>(res => {
-      const r = new FileReader();
-      r.onload = () => res({ url: r.result as string, file: f });
-      r.readAsDataURL(f);
-    }))).then(items => addPending(items));
+    Promise.all(
+      files.map(
+        (f) =>
+          new Promise<{ url: string; file: File }>((res) => {
+            const r = new FileReader();
+            r.onload = () => res({ url: r.result as string, file: f });
+            r.readAsDataURL(f);
+          }),
+      ),
+    ).then((items) => addPending(items));
     e.target.value = "";
   };
 
-  const openSearch = () => { setSearchOpen(true); setShowMenu(false); setTimeout(() => searchInputRef.current?.focus(), 80); };
-  const closeSearch = () => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); setSearchIdx(-1); };
+  const openSearch = () => {
+    setSearchOpen(true);
+    setShowMenu(false);
+    setTimeout(() => searchInputRef.current?.focus(), 80);
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchIdx(-1);
+  };
 
-  const doSearch = useCallback(async (q: string) => {
-    if (!q.trim() || !currentChat) { setSearchResults([]); setSearchIdx(-1); return; }
-    setSearchLoading(true);
-    try {
-      const { data } = await api.get(`/messages/${currentChat._id}/search?q=${encodeURIComponent(q)}`);
-      setSearchResults(data);
-      const idx = data.length - 1;
-      setSearchIdx(idx);
-      if (idx >= 0) scrollToMessage(data[idx]._id);
-    } catch { } finally { setSearchLoading(false); }
-  }, [currentChat, scrollToMessage]);
+  const doSearch = useCallback(
+    async (q: string) => {
+      if (!q.trim() || !currentChat) {
+        setSearchResults([]);
+        setSearchIdx(-1);
+        return;
+      }
+      setSearchLoading(true);
+      try {
+        const { data } = await api.get(
+          `/messages/${currentChat._id}/search?q=${encodeURIComponent(q)}`,
+        );
+        setSearchResults(data);
+        const idx = data.length - 1;
+        setSearchIdx(idx);
+        if (idx >= 0) scrollToMessage(data[idx]._id);
+      } catch {
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [currentChat, scrollToMessage],
+  );
 
   const handleSearchChange = (q: string) => {
     setSearchQuery(q);
@@ -508,81 +531,141 @@ const ChatPage = () => {
   const goToPrevResult = () => {
     if (!searchResults.length) return;
     const next = (searchIdx - 1 + searchResults.length) % searchResults.length;
-    setSearchIdx(next); scrollToMessage(searchResults[next]._id);
+    setSearchIdx(next);
+    scrollToMessage(searchResults[next]._id);
   };
   const goToNextResult = () => {
     if (!searchResults.length) return;
     const next = (searchIdx + 1) % searchResults.length;
-    setSearchIdx(next); scrollToMessage(searchResults[next]._id);
+    setSearchIdx(next);
+    scrollToMessage(searchResults[next]._id);
   };
 
   const handleMuteToggle = async () => {
     try {
       await api.post(`/chats/${currentChat._id}/mute`, { mute: !isMuted });
-      setIsMuted(p => !p);
+      setIsMuted((p) => !p);
       toast.success(isMuted ? "Notifications unmuted" : "Notifications muted");
-    } catch { toast.error("Failed to update notifications"); }
+    } catch {
+      toast.error("Failed to update notifications");
+    }
     setShowMenu(false);
   };
   const handleMediaFiles = () => {
-    const path = isGroup ? `/chat/group/${userId}/media` : `/chat/${userId}/media`;
+    const path = isGroup
+      ? `/chat/group/${userId}/media`
+      : `/chat/${userId}/media`;
     navigate(path);
     setShowMenu(false);
   };
-  const handleChatTheme = () => { setShowThemePicker(true); setShowMenu(false); };
+  const handleChatTheme = () => {
+    setShowThemePicker(true);
+    setShowMenu(false);
+  };
 
   const applyTheme = async (theme: ChatTheme) => {
     setShowThemePicker(false);
     setChatTheme(theme);
     if (userId) localStorage.setItem(`chat-theme-${userId}`, theme);
-    try { await api.post(`/chats/${currentChat._id}/theme`, { theme }); }
-    catch { toast.error("Failed to save theme"); }
+    try {
+      await api.post(`/chats/${currentChat._id}/theme`, { theme });
+    } catch {
+      toast.error("Failed to save theme");
+    }
   };
 
-  const handleBlockUser = () => { setShowMenu(false); setShowMoreMenu(false); setConfirmType("block"); };
-  const handleClearChat = () => { setShowMenu(false); setShowMoreMenu(false); setConfirmType("clear"); };
+  const handleBlockUser = () => {
+    setShowMenu(false);
+    setShowMoreMenu(false);
+    setConfirmType("block");
+  };
+  const handleClearChat = () => {
+    setShowMenu(false);
+    setShowMoreMenu(false);
+    setConfirmType("clear");
+  };
   const handleExportChat = async () => {
-    setShowMenu(false); setShowMoreMenu(false);
+    setShowMenu(false);
+    setShowMoreMenu(false);
     try {
-      const text = messages.map(m => `[${m.timestamp}] ${m.senderId === "me" ? "You" : chatUser?.name}: ${m.text || "[media]"}`).join("\n");
+      const text = messages
+        .map(
+          (m) =>
+            `[${m.timestamp}] ${m.senderId === "me" ? "You" : chatUser?.name}: ${m.text || "[media]"}`,
+        )
+        .join("\n");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
       a.download = `chat-${chatUser?.name || "export"}.txt`;
       a.click();
       toast.success("Chat exported");
-    } catch { toast.error("Export failed"); }
+    } catch {
+      toast.error("Export failed");
+    }
   };
-  const handleReport = () => { setShowMenu(false); setShowMoreMenu(false); toast.info("Report submitted"); };
+  const handleReport = () => {
+    setShowMenu(false);
+    setShowMoreMenu(false);
+    toast.info("Report submitted");
+  };
 
   const doBlock = async () => {
     setConfirmType(null);
-    try { await api.post(`/chats/${currentChat._id}/block`); toast.success(`${chatUser?.name} blocked`); navigate("/messengers", { replace: true }); }
-    catch { toast.error("Failed to block user"); }
+    try {
+      await api.post(`/chats/${currentChat._id}/block`);
+      toast.success(`${chatUser?.name} blocked`);
+      navigate("/messengers", { replace: true });
+    } catch {
+      toast.error("Failed to block user");
+    }
   };
   const doClear = async () => {
-    setConfirmType(null); setMessages([]);
+    setConfirmType(null);
+    setMessages([]);
     try {
       await api.delete(`/chats/${currentChat._id}/messages`);
       toast.success("Chat cleared");
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     } catch {
       toast.error("Failed to clear chat");
-      const { data } = await api.get(`/messages/${currentChat._id}`).catch(() => ({ data: [] }));
+      const { data } = await api
+        .get(`/messages/${currentChat._id}`)
+        .catch(() => ({ data: [] }));
       setMessages(data);
     }
   };
   const handleVerifyLock = async (password: string): Promise<boolean> => {
     try {
-      const { data } = await api.post(`/chats/${currentChat._id}/verify-lock`, { password });
-      if (data.verified) { setLockUnlocked(true); return true; }
+      const { data } = await api.post(`/chats/${currentChat._id}/verify-lock`, {
+        password,
+      });
+      if (data.verified) {
+        setLockUnlocked(true);
+        return true;
+      }
       return false;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
 
-  const handleMsgReply = (msg: Msg) => { setReplyingTo(msg); closeMsgMenu(); };
-  const handleMsgCopy = (msg: Msg) => { navigator.clipboard?.writeText(msg.text || ""); toast.success("Copied"); closeMsgMenu(); };
-  const handleMsgForward = (_msg: Msg) => { toast.info("Forward coming soon"); closeMsgMenu(); };
-  const handleMsgInfo = (msg: Msg) => { setMsgInfoOpen(msg); closeMsgMenu(); };
+  const handleMsgReply = (msg: Msg) => {
+    setReplyingTo(msg);
+    closeMsgMenu();
+  };
+  const handleMsgCopy = (msg: Msg) => {
+    navigator.clipboard?.writeText(msg.text || "");
+    toast.success("Copied");
+    closeMsgMenu();
+  };
+  const handleMsgForward = (_msg: Msg) => {
+    toast.info("Forward coming soon");
+    closeMsgMenu();
+  };
+  const handleMsgInfo = (msg: Msg) => {
+    setMsgInfoOpen(msg);
+    closeMsgMenu();
+  };
   const handleMsgEdit = (msg: Msg) => {
     setEditingMsg(msg);
     setInput(msg.text || "");
@@ -592,44 +675,53 @@ const ChatPage = () => {
   const handleMsgDelete = async (msg: Msg, forEveryone = false) => {
     closeMsgMenu();
     if (!forEveryone) {
-      setMessages(p => p.filter(m => m.id !== msg.id));
+      setMessages((p) => p.filter((m) => m.id !== msg.id));
     }
     try {
       await api.delete(`/messages/${msg.id}`, {
         params: { deleteForEveryone: forEveryone },
-        data: { deleteForEveryone: forEveryone }
+        data: { deleteForEveryone: forEveryone },
       });
       if (!forEveryone) {
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       }
-    } catch { toast.error("Failed to delete"); }
+    } catch {
+      toast.error("Failed to delete");
+    }
   };
 
   useEffect(() => {
     if (!socket || !currentChat?._id) return;
     const join = () => socket.emit("join chat", currentChat._id);
-    join(); socket.on("connect", join);
-    return () => { socket.off("connect", join); };
+    join();
+    socket.on("connect", join);
+    return () => {
+      socket.off("connect", join);
+    };
   }, [socket, currentChat?._id]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       if (userId) {
-        const cached = localStorage.getItem(`chat-theme-${userId}`) as ChatTheme | null;
+        const cached = localStorage.getItem(
+          `chat-theme-${userId}`,
+        ) as ChatTheme | null;
         if (cached) setChatTheme(cached);
       }
       try {
-        const isGroupId = location.pathname.includes('/chat/group/') || window.location.hash.includes('/chat/group/');
+        const isGroupId =
+          location.pathname.includes("/chat/group/") ||
+          window.location.hash.includes("/chat/group/");
         setIsGroup(isGroupId);
 
         let chatData;
         if (isGroupId) {
           const res = await api.get(`/chats`);
           chatData = res.data.find((c: any) => c._id === userId);
-          if (!chatData) throw new Error('Chat not found');
+          if (!chatData) throw new Error("Chat not found");
         } else {
-          const res = await api.post('/chats', { userId });
+          const res = await api.post("/chats", { userId });
           chatData = res.data;
         }
 
@@ -640,17 +732,23 @@ const ChatPage = () => {
         if (isGroupId) {
           setChatUser({ name: chatData.chatName, avatar: chatData.avatar });
         } else {
-          const other = chatData.participants.find((p: any) => p._id !== user?._id);
+          const other = chatData.participants.find(
+            (p: any) => p._id !== user?._id,
+          );
           setChatUser(other);
           chatUserIdRef.current = other?._id ?? null;
           setChatUserOnline(!!other?.online);
         }
 
-        setIsMuted(!!chatData.mutedBy?.some((m: any) => (m._id || m) === user?._id));
+        setIsMuted(
+          !!chatData.mutedBy?.some((m: any) => (m._id || m) === user?._id),
+        );
         const serverTheme = (chatData.theme || "default") as ChatTheme;
         setChatTheme(serverTheme);
         if (userId) localStorage.setItem(`chat-theme-${userId}`, serverTheme);
-        const locked = !!chatData.locks?.some((l: any) => (l.user?._id || l.user) === user?._id);
+        const locked = !!chatData.locks?.some(
+          (l: any) => (l.user?._id || l.user) === user?._id,
+        );
         setIsLocked(locked);
         if (locked) setShowLockScreen("verify");
 
@@ -663,18 +761,28 @@ const ChatPage = () => {
           let replyTo: Msg["replyTo"] | undefined;
           if (m.replyTo) {
             const rtId = m.replyTo.senderId?._id || m.replyTo.senderId;
-            replyTo = { id: m.replyTo._id, senderId: rtId === myId ? "me" : "other", text: m.replyTo.text || "Voice message" };
+            replyTo = {
+              id: m.replyTo._id,
+              senderId: rtId === myId ? "me" : "other",
+              text: m.replyTo.text || "Voice message",
+            };
           }
           return {
-            id: m._id, senderId: isMe ? "me" : "other",
+            id: m._id,
+            senderId: isMe ? "me" : "other",
             sender: m.senderId,
             text: m.text,
-            timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+            timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            }),
             status: isMe ? (m.tickStatus ?? "sent") : undefined,
             readBy: m.readBy || [],
             reactions: m.reactions || [],
             ...(replyTo ? { replyTo } : {}),
-            ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+            ...(m.mediaUrl
+              ? { images: [m.mediaUrl], mediaType: m.mediaType }
+              : {}),
             isSystem: m.isSystem,
             isEdited: m.isEdited,
             createdAt: m.createdAt,
@@ -691,14 +799,20 @@ const ChatPage = () => {
           }
         }, 150);
 
-        const hasUnreadFromOthers = mapped.some(m => m.senderId === "other" && !m.readBy?.some(u => (u?._id || u).toString() === myId));
+        const hasUnreadFromOthers = mapped.some(
+          (m) =>
+            m.senderId === "other" &&
+            !m.readBy?.some((u) => (u?._id || u).toString() === myId),
+        );
         if (hasUnreadFromOthers) {
-          await api.post(`/messages/read/${chatData._id}`).catch(() => { });
+          await api.post(`/messages/read/${chatData._id}`).catch(() => {});
         }
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err: any) {
-        if (err.response?.status === 403) { toast.error("Must connect before chatting"); navigate("/search"); }
-        else {
+        if (err.response?.status === 403) {
+          toast.error("Must connect before chatting");
+          navigate("/search");
+        } else {
           console.error("Failed to load chat", err);
           toast.error("Failed to load chat. Please try again.");
         }
@@ -711,7 +825,9 @@ const ChatPage = () => {
       hasScrolledOnLoadRef.current = false;
       load();
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [userId, user, location.pathname]);
 
   useEffect(() => {
@@ -721,9 +837,9 @@ const ChatPage = () => {
       if (!currentChat || cid !== currentChat._id) return;
 
       const senderIdRaw = m.senderId?._id || m.senderId;
-      setMessages(prev => {
+      setMessages((prev) => {
         // Prevent duplicates
-        if (prev.find(x => x.id === m._id)) return prev;
+        if (prev.find((x) => x.id === m._id)) return prev;
 
         const myId = user?._id;
         const isMe = senderIdRaw === myId;
@@ -733,8 +849,10 @@ const ChatPage = () => {
           const rtIdRaw = m.replyTo.senderId?._id || m.replyTo.senderId;
           replyTo = {
             id: m.replyTo._id || m.replyTo,
-            senderId: (rtIdRaw === myId) ? "me" : "other",
-            text: m.replyTo.text || (m.replyTo.mediaUrl ? "Media message" : "Voice message")
+            senderId: rtIdRaw === myId ? "me" : "other",
+            text:
+              m.replyTo.text ||
+              (m.replyTo.mediaUrl ? "Media message" : "Voice message"),
           };
         }
 
@@ -743,12 +861,17 @@ const ChatPage = () => {
           senderId: isMe ? "me" : "other",
           sender: m.senderId,
           text: m.text,
-          timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-          status: isMe ? (m.tickStatus || "sent") : undefined,
+          timestamp: new Date(m.createdAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+          status: isMe ? m.tickStatus || "sent" : undefined,
           readBy: m.readBy || [],
           reactions: m.reactions || [],
           ...(replyTo ? { replyTo } : {}),
-          ...(m.mediaUrl ? { images: [m.mediaUrl], mediaType: m.mediaType } : {}),
+          ...(m.mediaUrl
+            ? { images: [m.mediaUrl], mediaType: m.mediaType }
+            : {}),
           isSystem: m.isSystem,
           isEdited: m.isEdited,
           createdAt: m.createdAt,
@@ -759,17 +882,19 @@ const ChatPage = () => {
 
       // Clear typing indicator for this sender
       if (isGroup) {
-        setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== senderIdRaw));
+        setTypingUsers((prev) =>
+          prev.filter((u) => (u._id || (u as any).userId) !== senderIdRaw),
+        );
       } else if (senderIdRaw === chatUserIdRef.current) {
         setIsTyping(false);
       }
 
       // Handle read receipts and global list invalidation for other's messages
       if (senderIdRaw.toString() !== user?._id?.toString()) {
-        if (!isAtBottomRef.current) setUnreadWhileAway(c => c + 1);
+        if (!isAtBottomRef.current) setUnreadWhileAway((c) => c + 1);
         if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
         readDebounceRef.current = setTimeout(() => {
-          api.post(`/messages/read/${cid}`).catch(() => { });
+          api.post(`/messages/read/${cid}`).catch(() => {});
           queryClient.invalidateQueries({ queryKey: ["chats"] });
         }, 1500);
       } else {
@@ -779,65 +904,105 @@ const ChatPage = () => {
     };
     const onDelivered = ({ messageId, chatId }: any) => {
       if (!currentChat || chatId !== currentChat._id) return;
-      setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" && (!messageId || m.id === messageId) ? { ...m, status: "delivered" } : m));
+      setMessages((p) =>
+        p.map((m) =>
+          m.senderId === "me" &&
+          m.status === "sent" &&
+          (!messageId || m.id === messageId)
+            ? { ...m, status: "delivered" }
+            : m,
+        ),
+      );
     };
     const onManyDelivered = ({ chatId, messageIds }: any) => {
       if (!currentChat || chatId !== currentChat._id) return;
       const s = new Set(messageIds as string[]);
-      setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" && s.has(m.id) ? { ...m, status: "delivered" } : m));
+      setMessages((p) =>
+        p.map((m) =>
+          m.senderId === "me" && m.status === "sent" && s.has(m.id)
+            ? { ...m, status: "delivered" }
+            : m,
+        ),
+      );
     };
     const onRead = ({ chatId, readBy, user: readByUser }: any) => {
       if (!currentChat || chatId !== currentChat._id) return;
       const rId = (readBy?._id || readBy)?.toString();
 
-      setMessages(p => p.map(m => {
-        const isMyMsg = m.senderId === "me";
-        const currentRB = m.readBy || [];
-        const alreadyRead = currentRB.some(ru => (ru?._id?.toString() || ru.toString()) === rId);
+      setMessages((p) =>
+        p.map((m) => {
+          const isMyMsg = m.senderId === "me";
+          const currentRB = m.readBy || [];
+          const alreadyRead = currentRB.some(
+            (ru) => (ru?._id?.toString() || ru.toString()) === rId,
+          );
 
-        if (rId && rId !== user?._id && !alreadyRead) {
-          const userObj = readByUser || groupData?.participants?.find((x: any) => x._id === rId) || { _id: rId, name: "Someone", avatar: "" };
-          return {
-            ...m,
-            readBy: [...currentRB, userObj],
-            status: isMyMsg ? "seen" : m.status
-          };
-        }
+          if (rId && rId !== user?._id && !alreadyRead) {
+            const userObj = readByUser ||
+              groupData?.participants?.find((x: any) => x._id === rId) || {
+                _id: rId,
+                name: "Someone",
+                avatar: "",
+              };
+            return {
+              ...m,
+              readBy: [...currentRB, userObj],
+              status: isMyMsg ? "seen" : m.status,
+            };
+          }
 
-        return isMyMsg && rId && rId !== user?._id ? { ...m, status: "seen" } : m;
-      }));
+          return isMyMsg && rId && rId !== user?._id
+            ? { ...m, status: "seen" }
+            : m;
+        }),
+      );
 
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
-    const onReaction = ({ messageId, reactions }: any) => setMessages(p => p.map(m => m.id === messageId ? { ...m, reactions } : m));
-    const onMsgDeleted = ({ messageId }: any) => setMessages(p => p.filter(m => m.id !== messageId));
+    const onReaction = ({ messageId, reactions }: any) =>
+      setMessages((p) =>
+        p.map((m) => (m.id === messageId ? { ...m, reactions } : m)),
+      );
+    const onMsgDeleted = ({ messageId }: any) =>
+      setMessages((p) => p.filter((m) => m.id !== messageId));
     const onMsgEdited = ({ messageId, text, systemMsg, isEdited }: any) => {
-      setMessages(p => {
-        const next = p.map(m => m.id === messageId ? { ...m, text, isEdited: isEdited ?? true } : m);
+      setMessages((p) => {
+        const next = p.map((m) =>
+          m.id === messageId ? { ...m, text, isEdited: isEdited ?? true } : m,
+        );
         if (systemMsg) {
           const sys = {
             id: systemMsg._id,
             senderId: "other",
             text: systemMsg.text,
             isSystem: true,
-            timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+            timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            }),
           };
-          if (!next.find(x => x.id === sys.id)) next.push(sys);
+          if (!next.find((x) => x.id === sys.id)) next.push(sys);
         }
         return next;
       });
     };
     const onSystemEvent = ({ systemMsg }: any) => {
       if (!systemMsg) return;
-      setMessages(p => {
-        if (p.find(x => x.id === systemMsg._id)) return p;
-        return [...p, {
-          id: systemMsg._id,
-          senderId: "other",
-          text: systemMsg.text,
-          isSystem: true,
-          timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-        }];
+      setMessages((p) => {
+        if (p.find((x) => x.id === systemMsg._id)) return p;
+        return [
+          ...p,
+          {
+            id: systemMsg._id,
+            senderId: "other",
+            text: systemMsg.text,
+            isSystem: true,
+            timestamp: new Date(systemMsg.createdAt).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+            }),
+          },
+        ];
       });
     };
 
@@ -855,20 +1020,31 @@ const ChatPage = () => {
     socket.on("theme-updated", onSystemEvent);
     socket.on("settings-updated", onSystemEvent);
     socket.on("typing", (data: any) => {
-      const uid = typeof data === 'string' ? data : (data.userId || data._id || data.senderId);
+      const uid =
+        typeof data === "string"
+          ? data
+          : data.userId || data._id || data.senderId;
       if (!uid || uid === user?._id) return;
 
       if (isGroup) {
-        setTypingUsers(prev => {
-          if (prev.find(u => (u._id || (u as any).userId) === uid)) return prev;
+        setTypingUsers((prev) => {
+          if (prev.find((u) => (u._id || (u as any).userId) === uid))
+            return prev;
           // Try to find user in participants
-          const participant = groupData?.participants?.find((p: any) => p._id === uid);
-          const userData = typeof data === 'object' ? data : {};
-          return [...prev, { ...userData, ...participant, _id: uid, userId: uid }];
+          const participant = groupData?.participants?.find(
+            (p: any) => p._id === uid,
+          );
+          const userData = typeof data === "object" ? data : {};
+          return [
+            ...prev,
+            { ...userData, ...participant, _id: uid, userId: uid },
+          ];
         });
         // Auto-clear after 10s as a fallback
         setTimeout(() => {
-          setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
+          setTypingUsers((prev) =>
+            prev.filter((u) => (u._id || (u as any).userId) !== uid),
+          );
         }, 10000);
       } else {
         setIsTyping(true);
@@ -880,10 +1056,15 @@ const ChatPage = () => {
     });
 
     socket.on("stop typing", (data: any) => {
-      const uid = typeof data === 'string' ? data : (data?.userId || data?._id || data?.senderId);
+      const uid =
+        typeof data === "string"
+          ? data
+          : data?.userId || data?._id || data?.senderId;
       if (!uid) return;
       if (isGroup) {
-        setTypingUsers(prev => prev.filter(u => (u._id || (u as any).userId) !== uid));
+        setTypingUsers((prev) =>
+          prev.filter((u) => (u._id || (u as any).userId) !== uid),
+        );
       } else {
         setIsTyping(false);
       }
@@ -891,22 +1072,43 @@ const ChatPage = () => {
 
     socket.on("stop typing", (data: any) => {
       if (isGroup) {
-        setTypingUsers(prev => prev.filter(u => u._id !== data.userId));
+        setTypingUsers((prev) => prev.filter((u) => u._id !== data.userId));
       } else {
         setIsTyping(false);
       }
     });
-    socket.on("user-online", (uid: string) => { if (uid === chatUserIdRef.current) { setChatUserOnline(true); setMessages(p => p.map(m => m.senderId === "me" && m.status === "sent" ? { ...m, status: "delivered" } : m)); } });
-    socket.on("user-offline", (uid: string) => { if (uid === chatUserIdRef.current) setChatUserOnline(false); });
+    socket.on("user-online", (uid: string) => {
+      if (uid === chatUserIdRef.current) {
+        setChatUserOnline(true);
+        setMessages((p) =>
+          p.map((m) =>
+            m.senderId === "me" && m.status === "sent"
+              ? { ...m, status: "delivered" }
+              : m,
+          ),
+        );
+      }
+    });
+    socket.on("user-offline", (uid: string) => {
+      if (uid === chatUserIdRef.current) setChatUserOnline(false);
+    });
     return () => {
-      socket.off("message recieved", onNewMsg); socket.off("message delivered", onDelivered);
-      socket.off("messages delivered", onManyDelivered); socket.off("messages read", onRead);
-      socket.off("reaction updated", onReaction); socket.off("message deleted", onMsgDeleted);
+      socket.off("message recieved", onNewMsg);
+      socket.off("message delivered", onDelivered);
+      socket.off("messages delivered", onManyDelivered);
+      socket.off("messages read", onRead);
+      socket.off("reaction updated", onReaction);
+      socket.off("message deleted", onMsgDeleted);
       socket.off("message edited", onMsgEdited);
-      socket.off("member-added", onSystemEvent); socket.off("member-removed", onSystemEvent);
-      socket.off("user-left", onSystemEvent); socket.off("theme-updated", onSystemEvent);
+      socket.off("member-added", onSystemEvent);
+      socket.off("member-removed", onSystemEvent);
+      socket.off("user-left", onSystemEvent);
+      socket.off("theme-updated", onSystemEvent);
       socket.off("settings-updated", onSystemEvent);
-      socket.off("typing"); socket.off("stop typing"); socket.off("user-online"); socket.off("user-offline");
+      socket.off("typing");
+      socket.off("stop typing");
+      socket.off("user-online");
+      socket.off("user-offline");
     };
   }, [socket, currentChat, user, queryClient, isGroup, groupData]);
 
@@ -938,41 +1140,60 @@ const ChatPage = () => {
     }
   }, [isTyping, typingUsers.length, scrollToBottom]);
 
-
-  useEffect(() => () => {
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (searchDebounce.current) clearTimeout(searchDebounce.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    },
+    [],
+  );
 
   const lastSeenIdx = (() => {
     for (let i = messages.length - 1; i >= 0; i--)
-      if (messages[i].senderId === "me" && messages[i].status === "seen") return i;
+      if (messages[i].senderId === "me" && messages[i].status === "seen")
+        return i;
     return -1;
   })();
 
-  const addPending = (items: { url: string; file?: File }[]) => setPendingImages(p => [...p, ...items]);
-  const removePending = (i: number) => setPendingImages(p => p.filter((_, idx) => idx !== i));
-  const openLightbox = (images: string[], index: number) => setLightbox({ images, index });
+  const addPending = (items: { url: string; file?: File }[]) =>
+    setPendingImages((p) => [...p, ...items]);
+  const removePending = (i: number) =>
+    setPendingImages((p) => p.filter((_, idx) => idx !== i));
+  const openLightbox = (images: string[], index: number) =>
+    setLightbox({ images, index });
 
   const handleReact = useCallback(async (msgId: string, emoji: string) => {
-    try { await api.post(`/messages/${msgId}/react`, { emoji }); }
-    catch (err) { console.error("React failed", err); }
+    try {
+      await api.post(`/messages/${msgId}/react`, { emoji });
+    } catch (err) {
+      console.error("React failed", err);
+    }
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-    if (!socket || !currentChat) return;
-    socket.emit("typing", currentChat._id);
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => socket.emit("stop typing", currentChat._id), 3000);
-  }, [socket, currentChat]);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInput(e.target.value);
+      if (!socket || !currentChat) return;
+      socket.emit("typing", currentChat._id);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(
+        () => socket.emit("stop typing", currentChat._id),
+        3000,
+      );
+    },
+    [socket, currentChat],
+  );
 
-  const uploadFile = async (file: File): Promise<{ url: string; type: string }> => {
+  const uploadFile = async (
+    file: File,
+  ): Promise<{ url: string; type: string }> => {
     const formData = new FormData();
     formData.append("file", file);
-    const { data } = await api.post("/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
+    const { data } = await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return { url: data.url, type: data.type };
   };
 
@@ -981,11 +1202,16 @@ const ChatPage = () => {
     if (editingMsg) {
       const msgId = editingMsg.id;
       const newText = input.trim();
-      setMessages(p => p.map(m => m.id === msgId ? { ...m, text: newText } : m));
+      setMessages((p) =>
+        p.map((m) => (m.id === msgId ? { ...m, text: newText } : m)),
+      );
       setEditingMsg(null);
       setInput("");
-      try { await api.patch(`/messages/${msgId}`, { text: newText }); }
-      catch { toast.error("Edit failed"); }
+      try {
+        await api.patch(`/messages/${msgId}`, { text: newText });
+      } catch {
+        toast.error("Edit failed");
+      }
       return;
     }
     if (!currentChat) return;
@@ -994,38 +1220,101 @@ const ChatPage = () => {
 
     const content = input.trim();
     const replySnap = replyingTo;
-    const filesToUpload = pendingImages.filter(p => !!p.file);
-    setInput(""); setReplyingTo(null); setPendingImages([]);
+    const filesToUpload = pendingImages.filter((p) => !!p.file);
+    setInput("");
+    setReplyingTo(null);
+    setPendingImages([]);
 
-    const ts = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const replyObj = replySnap ? { replyTo: { id: replySnap.id, senderId: replySnap.senderId, text: replySnap.text || "Voice message" } } : {};
+    const ts = new Date().toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const replyObj = replySnap
+      ? {
+          replyTo: {
+            id: replySnap.id,
+            senderId: replySnap.senderId,
+            text: replySnap.text || "Voice message",
+          },
+        }
+      : {};
 
     if (content) {
       const tempId = `m${Date.now()}`;
-      setMessages(p => [...p, { id: tempId, senderId: "me", text: content, timestamp: ts, status: "sent", reactions: [], ...replyObj }]);
+      setMessages((p) => [
+        ...p,
+        {
+          id: tempId,
+          senderId: "me",
+          text: content,
+          timestamp: ts,
+          status: "sent",
+          reactions: [],
+          ...replyObj,
+        },
+      ]);
       setTimeout(() => scrollToBottom("smooth"), 50);
       try {
-        const res = await api.post("/messages", { chatId: currentChat._id, content, ...(replySnap ? { replyTo: replySnap.id } : {}) });
+        const res = await api.post("/messages", {
+          chatId: currentChat._id,
+          content,
+          ...(replySnap ? { replyTo: replySnap.id } : {}),
+        });
         if (socket) socket.emit("new message", res.data);
-        setMessages(p => p.map(m => m.id === tempId ? { ...m, id: res.data._id } : m));
-      } catch (err) { console.error("Send text failed", err); }
+        setMessages((p) =>
+          p.map((m) => (m.id === tempId ? { ...m, id: res.data._id } : m)),
+        );
+      } catch (err) {
+        console.error("Send text failed", err);
+      }
     }
 
     if (filesToUpload.length > 0) {
       setUploadStatus("uploading");
       for (const pending of filesToUpload) {
         const tempMediaId = `mm${Date.now()}${Math.random()}`;
-        setMessages(p => [...p, { id: tempMediaId, senderId: "me", timestamp: ts, status: "sent", reactions: [], images: [pending.url], isUploading: true, ...replyObj }]);
+        setMessages((p) => [
+          ...p,
+          {
+            id: tempMediaId,
+            senderId: "me",
+            timestamp: ts,
+            status: "sent",
+            reactions: [],
+            images: [pending.url],
+            isUploading: true,
+            ...replyObj,
+          },
+        ]);
         setTimeout(() => scrollToBottom("smooth"), 50);
         try {
           const { url, type } = await uploadFile(pending.file!);
           const mediaType = type === "video" ? "video" : "image";
-          setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, images: [url], isUploading: false, mediaType } : m));
-          const mediaRes = await api.post("/messages", { chatId: currentChat._id, mediaUrl: url, mediaType, ...(replySnap ? { replyTo: replySnap.id } : {}) });
+          setMessages((p) =>
+            p.map((m) =>
+              m.id === tempMediaId
+                ? { ...m, images: [url], isUploading: false, mediaType }
+                : m,
+            ),
+          );
+          const mediaRes = await api.post("/messages", {
+            chatId: currentChat._id,
+            mediaUrl: url,
+            mediaType,
+            ...(replySnap ? { replyTo: replySnap.id } : {}),
+          });
           if (socket) socket.emit("new message", mediaRes.data);
-          setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, id: mediaRes.data._id } : m));
+          setMessages((p) =>
+            p.map((m) =>
+              m.id === tempMediaId ? { ...m, id: mediaRes.data._id } : m,
+            ),
+          );
         } catch {
-          setMessages(p => p.map(m => m.id === tempMediaId ? { ...m, isUploading: false } : m));
+          setMessages((p) =>
+            p.map((m) =>
+              m.id === tempMediaId ? { ...m, isUploading: false } : m,
+            ),
+          );
         }
       }
       setUploadStatus("done");
@@ -1035,26 +1324,63 @@ const ChatPage = () => {
 
   const hasContent = input.trim() || pendingImages.length > 0;
   const isOnline = chatUserOnline;
-  const statusLabel = isTyping ? "typing…"
-    : isOnline ? "Online"
-      : chatUser?.lastSeen ? `Last seen ${new Date(chatUser.lastSeen).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Offline";
+  const statusLabel = isTyping
+    ? "typing…"
+    : isOnline
+      ? "Online"
+      : chatUser?.lastSeen
+        ? `Last seen ${new Date(chatUser.lastSeen).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        : "Offline";
 
-  const isGroupAdmin = isGroup && groupData?.admins?.some((a: any) => (a._id || a) === user?._id);
+  const isGroupAdmin =
+    isGroup && groupData?.admins?.some((a: any) => (a._id || a) === user?._id);
 
   const getMsgMenuActions = (msg: any) => {
     return [
-      { icon: <Reply size={15} strokeWidth={1.5} />, label: "Reply", fn: () => handleMsgReply(msg) },
+      {
+        icon: <Reply size={15} strokeWidth={1.5} />,
+        label: "Reply",
+        fn: () => handleMsgReply(msg),
+      },
       {
         icon: <Pencil size={15} strokeWidth={1.5} />,
         label: "Edit",
         fn: () => handleMsgEdit(msg),
-        hide: msg.senderId !== "me" || !!msg.images?.length || (msg.createdAt && new Date(msg.createdAt).getTime() < Date.now() - 3600000)
+        hide:
+          msg.senderId !== "me" ||
+          !!msg.images?.length ||
+          (msg.createdAt &&
+            new Date(msg.createdAt).getTime() < Date.now() - 3600000),
       },
-      { icon: <Copy size={15} strokeWidth={1.5} />, label: "Copy", fn: () => handleMsgCopy(msg), hide: !msg.text },
-      { icon: <Forward size={15} strokeWidth={1.5} />, label: "Forward", fn: () => handleMsgForward(msg) },
-      { icon: <Info size={15} strokeWidth={1.5} />, label: "Message info", fn: () => handleMsgInfo(msg) },
-      { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for me", fn: () => handleMsgDelete(msg, false), danger: true },
-      { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Delete for everyone", fn: () => handleMsgDelete(msg, true), danger: true, hide: msg.senderId !== "me" && !isGroupAdmin },
+      {
+        icon: <Copy size={15} strokeWidth={1.5} />,
+        label: "Copy",
+        fn: () => handleMsgCopy(msg),
+        hide: !msg.text,
+      },
+      {
+        icon: <Forward size={15} strokeWidth={1.5} />,
+        label: "Forward",
+        fn: () => handleMsgForward(msg),
+      },
+      {
+        icon: <Info size={15} strokeWidth={1.5} />,
+        label: "Message info",
+        fn: () => handleMsgInfo(msg),
+      },
+      {
+        icon: <Trash2 size={15} strokeWidth={1.5} />,
+        label: "Delete for me",
+        fn: () => handleMsgDelete(msg, false),
+        danger: true,
+      },
+      {
+        icon: <Trash2 size={15} strokeWidth={1.5} />,
+        label: "Delete for everyone",
+        fn: () => handleMsgDelete(msg, true),
+        danger: true,
+        hide: msg.senderId !== "me" && !isGroupAdmin,
+      },
     ].filter((a: any) => !a.hide);
   };
 
@@ -1063,13 +1389,13 @@ const ChatPage = () => {
     const actions = getMsgMenuActions(msgMenu.msg);
     const menuW = 250;
     // Calculation: (actions * 51px approx height) + 60px for reaction bar
-    const menuH = (actions.length * 51) + 60; 
-    
+    const menuH = actions.length * 51 + 60;
+
     // Respect the max-width of the app for horizontal positioning
     const appWidth = Math.min(window.innerWidth, 430);
     const vh = window.innerHeight;
     const headerHeight = 76; // Approx height of header + safety
-    
+
     // Center alignment relative to touch but within app width
     let left = msgMenu.x - menuW / 2;
     let top = msgMenu.y + 12;
@@ -1104,17 +1430,20 @@ const ChatPage = () => {
   // Header bg style for themed mode (Solid for better premium feel)
   const headerBgStyle: React.CSSProperties = isDefault
     ? {}
-    : { backgroundColor: `${themeDef.hex}`, borderBottom: "1px solid rgba(255,255,255,0.1)" };
+    : {
+        backgroundColor: `${themeDef.hex}`,
+        borderBottom: "1px solid rgba(255,255,255,0.1)",
+      };
 
   // Bottom gradient style
   const bottomGradientStyle: React.CSSProperties = isDefault
     ? {}
-    : { background: `linear-gradient(to top, ${themeDef.hex} 0%, ${themeDef.hex}F2 70%, transparent 100%)` };
+    : {
+        background: `linear-gradient(to top, ${themeDef.hex} 0%, ${themeDef.hex}F2 70%, transparent 100%)`,
+      };
 
   // Typing indicator bg
-  const typingBubbleBg = isDefault
-    ? undefined
-    : themeDef.otherBubble;
+  const typingBubbleBg = isDefault ? undefined : themeDef.otherBubble;
 
   return (
     <>
@@ -1128,18 +1457,42 @@ const ChatPage = () => {
         @keyframes slideUp   { from{opacity:0;transform:translateY(60px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      <input ref={quickCameraRef} type="file" multiple
+      <input
+        ref={quickCameraRef}
+        type="file"
+        multiple
         accept="image/*,video/*,.heic,.heif,.mov"
-        capture="environment" className="hidden" onChange={handleQuickCameraPick} />
+        capture="environment"
+        className="hidden"
+        onChange={handleQuickCameraPick}
+      />
 
-      {lightbox && <Lightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />}
+      {lightbox && (
+        <Lightbox
+          images={lightbox.images}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
+      )}
 
-      <ConfirmModal isOpen={confirmType === "block"} title={`Block ${chatUser?.name}?`}
-        message="They won't be able to send you messages." confirmLabel="Block" danger
-        onConfirm={doBlock} onCancel={() => setConfirmType(null)} />
-      <ConfirmModal isOpen={confirmType === "clear"} title="Clear chat?"
-        message="All messages deleted for you. Cannot be undone." confirmLabel="Clear Chat" danger
-        onConfirm={doClear} onCancel={() => setConfirmType(null)} />
+      <ConfirmModal
+        isOpen={confirmType === "block"}
+        title={`Block ${chatUser?.name}?`}
+        message="They won't be able to send you messages."
+        confirmLabel="Block"
+        danger
+        onConfirm={doBlock}
+        onCancel={() => setConfirmType(null)}
+      />
+      <ConfirmModal
+        isOpen={confirmType === "clear"}
+        title="Clear chat?"
+        message="All messages deleted for you. Cannot be undone."
+        confirmLabel="Clear Chat"
+        danger
+        onConfirm={doClear}
+        onCancel={() => setConfirmType(null)}
+      />
 
       {showThemePicker && (
         <ThemePicker
@@ -1152,27 +1505,64 @@ const ChatPage = () => {
 
       {/* Message info sheet */}
       {msgInfoOpen && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center"
+        <div
+          className="fixed inset-0 z-[200] flex items-end justify-center"
           style={{ background: "transparent", backdropFilter: "blur(4px)" }}
-          onClick={() => setMsgInfoOpen(null)}>
-          <div className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
-            style={sheetBg} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-muted-foreground/30" /></div>
+          onClick={() => setMsgInfoOpen(null)}
+        >
+          <div
+            className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden pb-8"
+            style={sheetBg}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
             <div className="px-6 pt-3 pb-2 flex items-center justify-between border-b border-border/30">
-              <h3 className="text-[17px] font-bold text-foreground">Message Info</h3>
-              <button onClick={() => setMsgInfoOpen(null)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"><X size={15} className="text-muted-foreground" /></button>
+              <h3 className="text-[17px] font-bold text-foreground">
+                Message Info
+              </h3>
+              <button
+                onClick={() => setMsgInfoOpen(null)}
+                className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+              >
+                <X size={15} className="text-muted-foreground" />
+              </button>
             </div>
             <div className="px-6 pt-4 space-y-4">
-              {msgInfoOpen.text && <div className="bg-secondary/40 rounded-2xl p-3"><p className="text-[14px] text-foreground leading-relaxed">{msgInfoOpen.text}</p></div>}
+              {msgInfoOpen.text && (
+                <div className="bg-secondary/40 rounded-2xl p-3">
+                  <p className="text-[14px] text-foreground leading-relaxed">
+                    {msgInfoOpen.text}
+                  </p>
+                </div>
+              )}
               <div className="space-y-3">
-                <div className="flex justify-between text-[13px]"><span className="text-muted-foreground">Sent</span><span className="text-foreground font-medium">{msgInfoOpen.timestamp}</span></div>
-                <div className="flex justify-between text-[13px]"><span className="text-muted-foreground">Status</span>
-                  <span className={`font-medium ${msgInfoOpen.status === "seen" ? "text-blue-500" : "text-foreground"}`}>
-                    {msgInfoOpen.status === "seen" ? "✓✓ Seen" : msgInfoOpen.status === "delivered" ? "✓✓ Delivered" : "✓ Sent"}
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-muted-foreground">Sent</span>
+                  <span className="text-foreground font-medium">
+                    {msgInfoOpen.timestamp}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-muted-foreground">Status</span>
+                  <span
+                    className={`font-medium ${msgInfoOpen.status === "seen" ? "text-blue-500" : "text-foreground"}`}
+                  >
+                    {msgInfoOpen.status === "seen"
+                      ? "✓✓ Seen"
+                      : msgInfoOpen.status === "delivered"
+                        ? "✓✓ Delivered"
+                        : "✓ Sent"}
                   </span>
                 </div>
                 {msgInfoOpen.reactions?.length > 0 && (
-                  <div className="flex justify-between text-[13px]"><span className="text-muted-foreground">Reactions</span><span className="text-foreground font-medium">{msgInfoOpen.reactions.map((r: any) => r.emoji).join(" ")}</span></div>
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-muted-foreground">Reactions</span>
+                    <span className="text-foreground font-medium">
+                      {msgInfoOpen.reactions.map((r: any) => r.emoji).join(" ")}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -1181,39 +1571,78 @@ const ChatPage = () => {
       )}
 
       {showLockScreen === "verify" && isLocked && !lockUnlocked && (
-        <LockScreen mode="verify" chatUserName={chatUser?.name || "Chat"} chatUserAvatar={chatUser?.avatar}
-          onVerified={() => { setShowLockScreen(null); setLockUnlocked(true); }}
-          onSubmit={handleVerifyLock} />
+        <LockScreen
+          mode="verify"
+          chatUserName={chatUser?.name || "Chat"}
+          chatUserAvatar={chatUser?.avatar}
+          onVerified={() => {
+            setShowLockScreen(null);
+            setLockUnlocked(true);
+          }}
+          onSubmit={handleVerifyLock}
+        />
       )}
 
       {/* Message context menu */}
       {msgMenu && (
-        <div className="fixed inset-0 z-[60]" style={{ background: "transparent", backdropFilter: "blur(2px)" }}
-          onMouseDown={() => setMsgMenu(null)} onTouchStart={() => setMsgMenu(null)}>
-          <div ref={msgMenuRef} className="fixed rounded-[24px] overflow-hidden"
-            style={{ ...msgMenuBg, ...getMsgMenuStyle(), animation: "msgMenuIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both", width: 250 }}
-            onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
-            <div className={`flex items-center justify-around px-2 py-3 border-b ${menuBorderClass}`}>
+        <div
+          className="fixed inset-0 z-[60]"
+          style={{ background: "transparent", backdropFilter: "blur(2px)" }}
+          onMouseDown={() => setMsgMenu(null)}
+          onTouchStart={() => setMsgMenu(null)}
+        >
+          <div
+            ref={msgMenuRef}
+            className="fixed rounded-[24px] overflow-hidden"
+            style={{
+              ...msgMenuBg,
+              ...getMsgMenuStyle(),
+              animation: "msgMenuIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both",
+              width: 250,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            <div
+              className={`flex items-center justify-around px-2 py-3 border-b ${menuBorderClass}`}
+            >
               {quickReactions.map((e, idx) => (
-                <button key={idx}
-                  onClick={() => { handleReact(msgMenu.msgId, e); closeMsgMenu(); }}
-                  onContextMenu={ev => { ev.preventDefault(); setEmojiPickerMode({ replaceIndex: idx }); }}
-                  className="text-[22px] active:scale-75 transition-all hover:scale-125 relative group">
+                <button
+                  key={idx}
+                  onClick={() => {
+                    handleReact(msgMenu.msgId, e);
+                    closeMsgMenu();
+                  }}
+                  onContextMenu={(ev) => {
+                    ev.preventDefault();
+                    setEmojiPickerMode({ replaceIndex: idx });
+                  }}
+                  className="text-[22px] active:scale-75 transition-all hover:scale-125 relative group"
+                >
                   {e}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary text-[7px] text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">✎</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary text-[7px] text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    ✎
+                  </span>
                 </button>
               ))}
-              <button onClick={() => setEmojiPickerMode("react")}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${!isDefault ? "bg-white/10 hover:bg-white/20" : "bg-muted/60 hover:bg-muted"}`}>
+              <button
+                onClick={() => setEmojiPickerMode("react")}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 ${!isDefault ? "bg-white/10 hover:bg-white/20" : "bg-muted/60 hover:bg-muted"}`}
+              >
                 <Plus size={16} className={menuMutedClass} />
               </button>
             </div>
             {msgMenuActions.map((a: any, i: number) => (
-              <button key={i} onClick={a.fn}
+              <button
+                key={i}
+                onClick={a.fn}
                 className={`w-full flex items-center gap-3.5 px-5 py-3.5 text-[14px] font-semibold transition-all text-left active:opacity-60
                   ${a.danger ? "text-red-500 hover:bg-red-500/10" : `${menuTextClass} ${menuHoverClass}`}
-                  ${i < msgMenuActions.length - 1 ? `border-b ${menuBorderClass}` : ""}`}>
-                <span className={a.danger ? "text-red-500" : menuMutedClass}>{a.icon}</span>
+                  ${i < msgMenuActions.length - 1 ? `border-b ${menuBorderClass}` : ""}`}
+              >
+                <span className={a.danger ? "text-red-500" : menuMutedClass}>
+                  {a.icon}
+                </span>
                 {a.label}
               </button>
             ))}
@@ -1223,20 +1652,34 @@ const ChatPage = () => {
 
       {emojiPickerMode !== null && msgMenu && (
         <EmojiPicker
-          onSelect={emoji => {
-            if (emojiPickerMode === "react") { handleReact(msgMenu.msgId, emoji); closeMsgMenu(); }
-            else { replaceReaction((emojiPickerMode as any).replaceIndex, emoji); setEmojiPickerMode(null); }
+          onSelect={(emoji) => {
+            if (emojiPickerMode === "react") {
+              handleReact(msgMenu.msgId, emoji);
+              closeMsgMenu();
+            } else {
+              replaceReaction((emojiPickerMode as any).replaceIndex, emoji);
+              setEmojiPickerMode(null);
+            }
           }}
-          onClose={closeMsgMenu} />
+          onClose={closeMsgMenu}
+        />
       )}
 
       {/* ── Main chat layout ── */}
       <div
         className={`${!isDefault ? "dark " : ""}flex flex-col max-w-[430px] mx-auto relative transition-colors duration-300 overflow-hidden ${isDefault ? "bg-background" : ""}`}
-        style={{ ...chatContainerStyle, height: 'var(--vh, 100dvh)', top: 'var(--vv-top, 0)' }}
+        style={{
+          ...chatContainerStyle,
+          height: "var(--vh, 100dvh)",
+          top: "var(--vv-top, 0)",
+        }}
       >
-        {/* Animated background layer (fixed, behind content) */}
-        {!isDefault && <ChatAnimatedBg key={chatTheme} themeId={chatTheme} />}
+        {/* Animated background layer */}
+        {!isDefault && (
+          <div className="absolute inset-0 z-[5] pointer-events-none">
+            <AnimatedBg key={chatTheme} themeId={chatTheme} />
+          </div>
+        )}
 
         {/* Header */}
         <div
@@ -1245,77 +1688,210 @@ const ChatPage = () => {
         >
           {!searchOpen ? (
             <div className="flex items-center gap-3 px-4 py-3 pb-4">
-              <button onClick={() => navigate(-1)} className="text-foreground hover:opacity-80 transition-opacity">
+              <button
+                onClick={() => navigate(-1)}
+                className="text-foreground hover:opacity-80 transition-opacity"
+              >
                 <ArrowLeft size={22} strokeWidth={1.5} />
               </button>
-              <button onClick={() => isGroup ? navigate(`/chat/group/${userId}/profile`) : navigate(`/chat/${userId}/profile`)}
-                className="flex-1 min-w-0 flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
+              <button
+                onClick={() =>
+                  isGroup
+                    ? navigate(`/chat/group/${userId}/profile`)
+                    : navigate(`/chat/${userId}/profile`)
+                }
+                className="flex-1 min-w-0 flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+              >
                 <div className="relative shrink-0">
-                  <img src={chatUser?.avatar || (isGroup ? 'https://i.pravatar.cc/150?u=group' : 'https://i.pravatar.cc/150')} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white/10" alt="" />
-                  {!isGroup && isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />}
+                  <img
+                    src={
+                      chatUser?.avatar ||
+                      (isGroup
+                        ? "https://i.pravatar.cc/150?u=group"
+                        : "https://i.pravatar.cc/150")
+                    }
+                    className="w-10 h-10 rounded-full object-cover shadow-sm border border-white/10"
+                    alt=""
+                  />
+                  {!isGroup && isOnline && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                  )}
                 </div>
                 <div className="flex flex-col flex-1 overflow-hidden leading-tight justify-center mt-0.5">
-                  <span className="font-semibold text-foreground text-[15px] truncate">{chatUser?.name || "Loading..."}</span>
-                  <span className="text-[11px] truncate opacity-80 transition-colors duration-300"
-                    style={{ color: (isTyping || typingUsers.length > 0) ? "hsl(var(--primary))" : (!isGroup && isOnline) ? "hsl(142 70% 45%)" : "hsl(var(--muted-foreground))" }}>
-                    {isGroup ? (
-                      typingUsers.length > 0
+                  <span className="font-semibold text-foreground text-[15px] truncate">
+                    {chatUser?.name || "Loading..."}
+                  </span>
+                  <span
+                    className="text-[11px] truncate opacity-80 transition-colors duration-300"
+                    style={{
+                      color:
+                        isTyping || typingUsers.length > 0
+                          ? "hsl(var(--primary))"
+                          : !isGroup && isOnline
+                            ? "hsl(142 70% 45%)"
+                            : "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    {isGroup
+                      ? typingUsers.length > 0
                         ? `${typingUsers[0].name} is typing...`
                         : `${groupData?.participants?.length || 0} members`
-                    ) : statusLabel}
+                      : statusLabel}
                   </span>
                 </div>
               </button>
               <div className="flex items-center gap-1 text-muted-foreground">
-                <button className="hover:text-foreground transition-colors p-1.5"><Video size={22} strokeWidth={1.5} /></button>
-                <button className="hover:text-foreground transition-colors p-1.5"><Phone size={20} strokeWidth={1.5} /></button>
+                <button className="hover:text-foreground transition-colors p-1.5">
+                  <Video size={22} strokeWidth={1.5} />
+                </button>
+                <button className="hover:text-foreground transition-colors p-1.5">
+                  <Phone size={20} strokeWidth={1.5} />
+                </button>
                 <div className="relative" ref={menuRef}>
-                  <button onClick={() => { setShowMenu(p => !p); setShowMoreMenu(false); }}
-                    className={`hover:text-foreground transition-colors p-1.5 rounded-full ${showMenu ? "text-foreground bg-muted" : ""}`}>
+                  <button
+                    onClick={() => {
+                      setShowMenu((p) => !p);
+                      setShowMoreMenu(false);
+                    }}
+                    className={`hover:text-foreground transition-colors p-1.5 rounded-full ${showMenu ? "text-foreground bg-muted" : ""}`}
+                  >
                     <MoreVertical size={20} strokeWidth={1.5} />
                   </button>
                   {showMenu && (
-                    <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
-                      style={{ ...dropdownBg, animation: "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both", transformOrigin: "top right" }}>
+                    <div
+                      className="absolute right-0 top-full mt-2 w-56 rounded-2xl z-50 overflow-hidden"
+                      style={{
+                        ...dropdownBg,
+                        animation:
+                          "menuIn 0.18s cubic-bezier(0.34,1.2,0.64,1) both",
+                        transformOrigin: "top right",
+                      }}
+                    >
                       {!showMoreMenu ? (
                         <>
                           {[
-                            { icon: isMuted ? <Bell size={16} strokeWidth={1.5} /> : <BellOff size={16} strokeWidth={1.5} />, label: isMuted ? "Unmute notifications" : "Mute notifications", fn: handleMuteToggle },
-                            { icon: <Search size={16} strokeWidth={1.5} />, label: "Search in chat", fn: openSearch },
-                            { icon: <Image size={16} strokeWidth={1.5} />, label: "Media & files", fn: handleMediaFiles },
-                            { icon: <Palette size={16} strokeWidth={1.5} />, label: "Chat theme", fn: handleChatTheme },
-                            { icon: <Info size={16} strokeWidth={1.5} />, label: isGroup ? "Group info" : "User info", fn: () => isGroup ? navigate(`/chat/group/${userId}/profile`) : navigate(`/chat/${userId}/profile`) },
+                            {
+                              icon: isMuted ? (
+                                <Bell size={16} strokeWidth={1.5} />
+                              ) : (
+                                <BellOff size={16} strokeWidth={1.5} />
+                              ),
+                              label: isMuted
+                                ? "Unmute notifications"
+                                : "Mute notifications",
+                              fn: handleMuteToggle,
+                            },
+                            {
+                              icon: <Search size={16} strokeWidth={1.5} />,
+                              label: "Search in chat",
+                              fn: openSearch,
+                            },
+                            {
+                              icon: <Image size={16} strokeWidth={1.5} />,
+                              label: "Media & files",
+                              fn: handleMediaFiles,
+                            },
+                            {
+                              icon: <Palette size={16} strokeWidth={1.5} />,
+                              label: "Chat theme",
+                              fn: handleChatTheme,
+                            },
+                            {
+                              icon: <Info size={16} strokeWidth={1.5} />,
+                              label: isGroup ? "Group info" : "User info",
+                              fn: () =>
+                                isGroup
+                                  ? navigate(`/chat/group/${userId}/profile`)
+                                  : navigate(`/chat/${userId}/profile`),
+                            },
                           ].map((item, i) => (
-                            <button key={i} onClick={item.fn}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left border-b border-border/40">
-                              <span className="text-muted-foreground">{item.icon}</span>{item.label}
+                            <button
+                              key={i}
+                              onClick={item.fn}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left border-b border-border/40"
+                            >
+                              <span className="text-muted-foreground">
+                                {item.icon}
+                              </span>
+                              {item.label}
                             </button>
                           ))}
-                          <button onClick={e => { e.stopPropagation(); setShowMoreMenu(true); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left">
-                            <span className="text-muted-foreground"><MoreVertical size={16} strokeWidth={1.5} /></span>
-                            More <ChevronRight size={14} className="ml-auto text-muted-foreground" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMoreMenu(true);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium text-foreground hover:bg-muted/60 transition-colors text-left"
+                          >
+                            <span className="text-muted-foreground">
+                              <MoreVertical size={16} strokeWidth={1.5} />
+                            </span>
+                            More{" "}
+                            <ChevronRight
+                              size={14}
+                              className="ml-auto text-muted-foreground"
+                            />
                           </button>
                         </>
                       ) : (
                         <>
-                          <button onClick={e => { e.stopPropagation(); setShowMoreMenu(false); }}
-                            className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-semibold text-muted-foreground hover:bg-muted/60 transition-colors border-b border-border/40">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMoreMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-semibold text-muted-foreground hover:bg-muted/60 transition-colors border-b border-border/40"
+                          >
                             <ArrowLeft size={15} strokeWidth={2} /> Back
                           </button>
                           {[
-                            { icon: <Ban size={15} strokeWidth={1.5} />, label: "Block user", fn: handleBlockUser, danger: true, hide: isGroup },
-                            { icon: <Trash2 size={15} strokeWidth={1.5} />, label: "Clear chat", fn: handleClearChat, danger: true },
-                            { icon: <Download size={15} strokeWidth={1.5} />, label: "Export chat", fn: handleExportChat, danger: false },
-                            { icon: <Flag size={15} strokeWidth={1.5} />, label: "Report", fn: handleReport, danger: false },
-                          ].filter(i => !i.hide).map((item: any, i, arr) => (
-                            <button key={i} onClick={item.fn}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
+                            {
+                              icon: <Ban size={15} strokeWidth={1.5} />,
+                              label: "Block user",
+                              fn: handleBlockUser,
+                              danger: true,
+                              hide: isGroup,
+                            },
+                            {
+                              icon: <Trash2 size={15} strokeWidth={1.5} />,
+                              label: "Clear chat",
+                              fn: handleClearChat,
+                              danger: true,
+                            },
+                            {
+                              icon: <Download size={15} strokeWidth={1.5} />,
+                              label: "Export chat",
+                              fn: handleExportChat,
+                              danger: false,
+                            },
+                            {
+                              icon: <Flag size={15} strokeWidth={1.5} />,
+                              label: "Report",
+                              fn: handleReport,
+                              danger: false,
+                            },
+                          ]
+                            .filter((i) => !i.hide)
+                            .map((item: any, i, arr) => (
+                              <button
+                                key={i}
+                                onClick={item.fn}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-[13.5px] font-medium transition-colors text-left
                                 ${item.danger ? "text-red-500 hover:bg-red-500/10" : "text-foreground hover:bg-muted/60"}
-                                ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}>
-                              <span className={item.danger ? "text-red-500" : "text-muted-foreground"}>{item.icon}</span>{item.label}
-                            </button>
-                          ))}
+                                ${i < arr.length - 1 ? "border-b border-border/40" : ""}`}
+                              >
+                                <span
+                                  className={
+                                    item.danger
+                                      ? "text-red-500"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {item.icon}
+                                </span>
+                                {item.label}
+                              </button>
+                            ))}
                         </>
                       )}
                     </div>
@@ -1324,27 +1900,53 @@ const ChatPage = () => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-4 py-3 pb-4" style={{ animation: "apFade 0.18s ease both" }}>
+            <div
+              className="flex items-center gap-2 px-4 py-3 pb-4"
+              style={{ animation: "apFade 0.18s ease both" }}
+            >
               <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2.5 bg-secondary border border-border/40">
                 <Search size={15} className="text-muted-foreground shrink-0" />
-                <input ref={searchInputRef} value={searchQuery} onChange={e => handleSearchChange(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && goToNextResult()}
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && goToNextResult()}
                   placeholder="Search messages…"
-                  className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/60 outline-none" />
-                {searchLoading && <span className="text-[11px] text-muted-foreground">Searching…</span>}
+                  className="flex-1 bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground/60 outline-none"
+                />
+                {searchLoading && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Searching…
+                  </span>
+                )}
                 {!searchLoading && searchQuery && (
                   <span className="text-[11px] text-muted-foreground shrink-0">
-                    {searchResults.length > 0 ? `${searchIdx + 1}/${searchResults.length}` : "0 results"}
+                    {searchResults.length > 0
+                      ? `${searchIdx + 1}/${searchResults.length}`
+                      : "0 results"}
                   </span>
                 )}
                 {searchResults.length > 0 && (
                   <>
-                    <button onClick={goToPrevResult} className="p-1 text-muted-foreground hover:text-foreground"><ChevronUp size={16} /></button>
-                    <button onClick={goToNextResult} className="p-1 text-muted-foreground hover:text-foreground"><ChevronDown size={16} /></button>
+                    <button
+                      onClick={goToPrevResult}
+                      className="p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      onClick={goToNextResult}
+                      className="p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
                   </>
                 )}
               </div>
-              <button onClick={closeSearch} className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0">
+              <button
+                onClick={closeSearch}
+                className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -1353,17 +1955,31 @@ const ChatPage = () => {
 
         {uploadStatus !== "idle" && (
           <div className="relative z-10 text-center text-[12px] font-medium py-1 pointer-events-none">
-            <span className={`px-4 py-1 rounded-full mx-auto inline-block
-              ${uploadStatus === "uploading" ? "text-primary animate-pulse bg-primary/10"
-                : uploadStatus === "done" ? "text-green-500 bg-green-500/10"
-                  : "text-red-500 bg-red-500/10"}`}>
-              {uploadStatus === "uploading" ? "Sending…" : uploadStatus === "done" ? "Sent ✓" : "Failed to send"}
+            <span
+              className={`px-4 py-1 rounded-full mx-auto inline-block
+              ${
+                uploadStatus === "uploading"
+                  ? "text-primary animate-pulse bg-primary/10"
+                  : uploadStatus === "done"
+                    ? "text-green-500 bg-green-500/10"
+                    : "text-red-500 bg-red-500/10"
+              }`}
+            >
+              {uploadStatus === "uploading"
+                ? "Sending…"
+                : uploadStatus === "done"
+                  ? "Sent ✓"
+                  : "Failed to send"}
             </span>
           </div>
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col scrollbar-none">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col scrollbar-none"
+        >
           {/* Top Sentinel for Infinite Scroll */}
           <div ref={topSentinelRef} className="h-1 w-full shrink-0" />
 
@@ -1377,8 +1993,12 @@ const ChatPage = () => {
           )}
           {messages.map((msg, index) => {
             const isMe = msg.senderId === "me";
-            const isLastInGroup = !messages[index + 1] || messages[index + 1].senderId !== msg.senderId;
-            const isFirstInGroup = !messages[index - 1] || messages[index - 1].senderId !== msg.senderId;
+            const isLastInGroup =
+              !messages[index + 1] ||
+              messages[index + 1].senderId !== msg.senderId;
+            const isFirstInGroup =
+              !messages[index - 1] ||
+              messages[index - 1].senderId !== msg.senderId;
             const isLastMyMsg = index === lastSeenIdx;
             const isCurrentHit = searchResults[searchIdx]?._id === msg.id;
 
@@ -1395,36 +2015,66 @@ const ChatPage = () => {
             }
 
             // Only show participant avatar on the LATEST message they've read
-            const effectiveReadBy = isGroup ? (msg.readBy || []).filter(u => {
-              const uId = typeof u === 'string' ? u : u._id;
-              if (uId === user?._id) return false; // Don't show me in read stack
-              // Find if there's any later message seen by this user
-              const laterMsgWithUser = messages.slice(index + 1).find(m =>
-                m.readBy?.some(ru => (typeof ru === 'string' ? ru : ru._id) === uId)
-              );
-              return !laterMsgWithUser;
-            }) : msg.readBy;
+            const effectiveReadBy = isGroup
+              ? (msg.readBy || []).filter((u) => {
+                  const uId = typeof u === "string" ? u : u._id;
+                  if (uId === user?._id) return false; // Don't show me in read stack
+                  // Find if there's any later message seen by this user
+                  const laterMsgWithUser = messages
+                    .slice(index + 1)
+                    .find((m) =>
+                      m.readBy?.some(
+                        (ru) => (typeof ru === "string" ? ru : ru._id) === uId,
+                      ),
+                    );
+                  return !laterMsgWithUser;
+                })
+              : msg.readBy;
 
             return (
-              <div key={msg.id} id={`msg-${msg.id}`}
-                className={`transition-colors rounded-2xl ${isCurrentHit ? "ring-2 ring-primary/50 ring-offset-1" : ""}`}>
-                <div className={isLastInGroup ? "mb-4" : "mb-1"}
-                  onMouseDown={e => { if (e.button === 0) startLongPress(msg, e); }}
-                  onMouseUp={cancelLongPress} onMouseLeave={cancelLongPress}
-                  onMouseMove={e => moveLongPress(e)}
-                  onTouchStart={e => startLongPress(msg, e)}
-                  onTouchEnd={cancelLongPress} onTouchMove={e => moveLongPress(e)}>
+              <div
+                key={msg.id}
+                id={`msg-${msg.id}`}
+                className={`transition-colors rounded-2xl ${isCurrentHit ? "ring-2 ring-primary/50 ring-offset-1" : ""}`}
+              >
+                <div
+                  className={isLastInGroup ? "mb-4" : "mb-1"}
+                  onMouseDown={(e) => {
+                    if (e.button === 0) startLongPress(msg, e);
+                  }}
+                  onMouseUp={cancelLongPress}
+                  onMouseLeave={cancelLongPress}
+                  onMouseMove={(e) => moveLongPress(e)}
+                  onTouchStart={(e) => startLongPress(msg, e)}
+                  onTouchEnd={cancelLongPress}
+                  onTouchMove={(e) => moveLongPress(e)}
+                >
                   <SwipeRow
-                    msg={{ ...msg, readBy: effectiveReadBy as any }} isMe={isMe} isLast={isLastInGroup} isFirst={isFirstInGroup} isLastMyMsg={isLastMyMsg}
-                    onReply={setReplyingTo} chatUser={chatUser}
-                    playingVoice={playingVoice} setPlayingVoice={setPlayingVoice}
-                    onImageTap={openLightbox} onReact={handleReact}
+                    msg={{ ...msg, readBy: effectiveReadBy as any }}
+                    isMe={isMe}
+                    isLast={isLastInGroup}
+                    isFirst={isFirstInGroup}
+                    isLastMyMsg={isLastMyMsg}
+                    onReply={setReplyingTo}
+                    chatUser={chatUser}
+                    playingVoice={playingVoice}
+                    setPlayingVoice={setPlayingVoice}
+                    onImageTap={openLightbox}
+                    onReact={handleReact}
                     myUserId={user?._id ?? ""}
                     themeBubbleBg={isDefault ? undefined : themeDef.myBubble}
-                    themeBubbleText={isDefault ? undefined : themeDef.myBubbleText}
-                    themeOtherBubbleBg={isDefault ? undefined : themeDef.otherBubble}
-                    themeOtherBubbleText={isDefault ? undefined : themeDef.otherBubbleText}
-                    themeMutedTextColor={isDefault ? undefined : themeDef.mutedText}
+                    themeBubbleText={
+                      isDefault ? undefined : themeDef.myBubbleText
+                    }
+                    themeOtherBubbleBg={
+                      isDefault ? undefined : themeDef.otherBubble
+                    }
+                    themeOtherBubbleText={
+                      isDefault ? undefined : themeDef.otherBubbleText
+                    }
+                    themeMutedTextColor={
+                      isDefault ? undefined : themeDef.mutedText
+                    }
                     MediaRenderer={MediaRenderer}
                     isGroup={isGroup}
                     highlightText={searchQuery}
@@ -1434,11 +2084,11 @@ const ChatPage = () => {
             );
           })}
 
-          <TypingIndicator 
-            isGroup={isGroup} 
-            typingUsers={typingUsers} 
-            isTyping={isTyping} 
-            chatUser={chatUser} 
+          <TypingIndicator
+            isGroup={isGroup}
+            typingUsers={typingUsers}
+            isTyping={isTyping}
+            chatUser={chatUser}
             typingBubbleBg={typingBubbleBg}
             isEffectiveDark={isEffectiveDark}
             isDefault={isDefault}
@@ -1447,12 +2097,24 @@ const ChatPage = () => {
         </div>
 
         {/* FAB scroll to bottom */}
-        <div className="pointer-events-none fixed bottom-[100px] right-0 flex justify-end pr-5 z-40" style={{ maxWidth: 430, width: "100%" }}>
-          <div className={`pointer-events-auto transition-all duration-200 ${isAtBottom ? "opacity-0 scale-75 translate-y-2 pointer-events-none" : "opacity-100 scale-100 translate-y-0"}`}>
-            <button onClick={() => scrollToBottom("smooth")}
+        <div
+          className="pointer-events-none fixed bottom-[100px] right-0 flex justify-end pr-5 z-40"
+          style={{ maxWidth: 430, width: "100%" }}
+        >
+          <div
+            className={`pointer-events-auto transition-all duration-200 ${isAtBottom ? "opacity-0 scale-75 translate-y-2 pointer-events-none" : "opacity-100 scale-100 translate-y-0"}`}
+          >
+            <button
+              onClick={() => scrollToBottom("smooth")}
               className="w-11 h-11 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-transform relative"
-              style={blurStyle} aria-label="Scroll to bottom">
-              <ChevronDown size={22} className="text-foreground" strokeWidth={2.5} />
+              style={blurStyle}
+              aria-label="Scroll to bottom"
+            >
+              <ChevronDown
+                size={22}
+                className="text-foreground"
+                strokeWidth={2.5}
+              />
               {unreadWhileAway > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
                   {unreadWhileAway > 99 ? "99+" : unreadWhileAway}
@@ -1473,12 +2135,18 @@ const ChatPage = () => {
               {pendingImages.map((p, i) => (
                 <div key={i} className="relative shrink-0">
                   {isVideo(p.url, p.file?.type) ? (
-                    <video src={p.url} className="w-16 h-16 object-cover rounded-xl" />
+                    <video
+                      src={p.url}
+                      className="w-16 h-16 object-cover rounded-xl"
+                    />
                   ) : (
                     <PendingPreviewImg url={p.url} />
                   )}
-                  <button type="button" onClick={() => removePending(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={() => removePending(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center pointer-events-auto"
+                  >
                     <X size={10} />
                   </button>
                 </div>
@@ -1487,14 +2155,28 @@ const ChatPage = () => {
           )}
 
           {showAttachPanel ? (
-            <div className="rounded-[32px] pt-5 pb-0" style={{ ...inputPillStyle, animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both" }}>
-              <AttachmentPanel onClose={() => setShowAttachPanel(false)} onAddImages={addPending} />
+            <div
+              className="rounded-[32px] pt-5 pb-0"
+              style={{
+                ...inputPillStyle,
+                animation: "apSlide 0.25s cubic-bezier(0.34,1.2,0.64,1) both",
+              }}
+            >
+              <AttachmentPanel
+                onClose={() => setShowAttachPanel(false)}
+                onAddImages={addPending}
+              />
             </div>
           ) : (
-            <div className="flex items-end gap-2" style={{ animation: "apFade 0.2s ease both" }}>
-              <button onClick={() => setShowAttachPanel(true)}
+            <div
+              className="flex items-end gap-2"
+              style={{ animation: "apFade 0.2s ease both" }}
+            >
+              <button
+                onClick={() => setShowAttachPanel(true)}
                 className="text-foreground w-[46px] h-[46px] rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform"
-                style={inputPillStyle}>
+                style={inputPillStyle}
+              >
                 <FiPlus size={24} />
               </button>
               <div
@@ -1505,11 +2187,21 @@ const ChatPage = () => {
                   <div className="flex relative items-center gap-3 bg-primary/10 dark:bg-primary/5 p-3 pb-2 border-b border-primary/10 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0" />
                     <div className="flex-1 min-w-0 pr-8">
-                      <p className="text-[11px] font-bold tracking-wide uppercase text-primary mb-0.5">Editing Message</p>
-                      <p className="text-[13px] text-foreground/80 truncate font-medium">{editingMsg.text}</p>
+                      <p className="text-[11px] font-bold tracking-wide uppercase text-primary mb-0.5">
+                        Editing Message
+                      </p>
+                      <p className="text-[13px] text-foreground/80 truncate font-medium">
+                        {editingMsg.text}
+                      </p>
                     </div>
-                    <button type="button" onClick={() => { setEditingMsg(null); setInput(""); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all active:scale-90">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingMsg(null);
+                        setInput("");
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all active:scale-90"
+                    >
                       <X size={15} className="text-foreground/60" />
                     </button>
                   </div>
@@ -1519,9 +2211,16 @@ const ChatPage = () => {
                     <div className="w-[3.5px] h-9 bg-primary rounded-full shrink-0 shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
                     <div className="flex-1 min-w-0 pr-8">
                       <p className="text-[11px] font-bold tracking-wide uppercase text-primary/80 mb-0.5">
-                        Replying to {replyingTo.senderId === "me" ? "yourself" : (chatUser?.name?.split(" ")[0] || "User")}
+                        Replying to{" "}
+                        {replyingTo.senderId === "me"
+                          ? "yourself"
+                          : chatUser?.name?.split(" ")[0] || "User"}
                       </p>
-                      <p className="text-[13px] text-foreground/80 truncate font-medium">{(replyingTo as any).voiceNote ? "🎤 Voice message" : replyingTo.text}</p>
+                      <p className="text-[13px] text-foreground/80 truncate font-medium">
+                        {(replyingTo as any).voiceNote
+                          ? "🎤 Voice message"
+                          : replyingTo.text}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -1530,12 +2229,15 @@ const ChatPage = () => {
                         e.stopPropagation();
                         setReplyingTo(null);
                       }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all border border-foreground/5 z-[110] active:scale-90">
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-foreground/5 hover:bg-foreground/10 flex items-center justify-center shrink-0 transition-all border border-foreground/5 z-[110] active:scale-90"
+                    >
                       <X size={15} className="text-foreground/60" />
                     </button>
                   </div>
                 )}
-                <div className={`flex items-center gap-2 px-3 py-0 ${replyingTo ? "pt-0" : "pt-0"}`}>
+                <div
+                  className={`flex items-center gap-2 px-3 py-0 ${replyingTo ? "pt-0" : "pt-0"}`}
+                >
                   <textarea
                     ref={inputRef as any}
                     rows={1}
@@ -1550,7 +2252,7 @@ const ChatPage = () => {
                       const newHeight = Math.min(target.scrollHeight, 120);
                       target.style.height = `${newHeight}px`;
                     }}
-                    onKeyDown={e => {
+                    onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         sendMessage();
@@ -1561,10 +2263,21 @@ const ChatPage = () => {
                     placeholder="Type a message"
                     className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted-foreground/70 outline-none px-1 py-[11px] resize-none max-h-[120px] transition-all scrollbar-none"
                   />
-                  {hasContent
-                    ? <button onClick={sendMessage} className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"><FiSend size={20} /></button>
-                    : <button onClick={() => quickCameraRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors p-2 shrink-0"><FiCamera size={20} /></button>
-                  }
+                  {hasContent ? (
+                    <button
+                      onClick={sendMessage}
+                      className="text-primary hover:text-primary/80 transition-colors p-2 shrink-0"
+                    >
+                      <FiSend size={20} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => quickCameraRef.current?.click()}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-2 shrink-0"
+                    >
+                      <FiCamera size={20} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

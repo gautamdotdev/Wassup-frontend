@@ -261,15 +261,23 @@ function LoveParticles() {
       {Array.from({ length: 18 }).map((_, i) => {
         const emojis = ["❤️", "💕", "💗", "💓", "🩷", "💖", "💝", "💘"];
         return (
-          <span key={i} className="love-heart" style={{
-            left: `${5 + (i * 5.5) % 90}%`,
-            "--dur": `${6 + (i * 1.3) % 8}s`,
-            "--delay": `${-(i * 0.7) % 8}s`,
-            "--fsize": `${16 + (i * 7) % 24}px`,
-            "--r": `${-15 + (i * 11) % 30}deg`,
-            "--s": `${0.8 + (i * 0.1) % 0.6}`,
-            "--op": `${0.4 + (i * 0.06) % 0.5}`,
-          } as any}>{emojis[i % emojis.length]}</span>
+          <span
+            key={i}
+            className="love-heart"
+            style={
+              {
+                left: `${5 + ((i * 5.5) % 90)}%`,
+                "--dur": `${6 + ((i * 1.3) % 8)}s`,
+                "--delay": `${-(i * 0.7) % 8}s`,
+                "--fsize": `${16 + ((i * 7) % 24)}px`,
+                "--r": `${-15 + ((i * 11) % 30)}deg`,
+                "--s": `${0.8 + ((i * 0.1) % 0.6)}`,
+                "--op": `${0.4 + ((i * 0.06) % 0.5)}`,
+              } as any
+            }
+          >
+            {emojis[i % emojis.length]}
+          </span>
         );
       })}
     </div>
@@ -292,17 +300,34 @@ function GalaxyStars() {
         .g-shoot { position: absolute; width: 50px; height: 1.5px; background: linear-gradient(90deg,white,transparent); border-radius: 9999px; animation: shoot var(--d) var(--del) infinite; }
       `}</style>
       {Array.from({ length: 60 }).map((_, i) => (
-        <div key={i} className="g-star" style={{
-          left: `${(i * 17.3) % 100}%`, top: `${(i * 13.7) % 100}%`,
-          width: `${1 + (i % 3)}px`, height: `${1 + (i % 3)}px`,
-          "--d": `${1.5 + (i * 0.4) % 3}s`, "--del": `${-(i * 0.25) % 3}s`,
-        } as any} />
+        <div
+          key={i}
+          className="g-star"
+          style={
+            {
+              left: `${(i * 17.3) % 100}%`,
+              top: `${(i * 13.7) % 100}%`,
+              width: `${1 + (i % 3)}px`,
+              height: `${1 + (i % 3)}px`,
+              "--d": `${1.5 + ((i * 0.4) % 3)}s`,
+              "--del": `${-(i * 0.25) % 3}s`,
+            } as any
+          }
+        />
       ))}
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={`s${i}`} className="g-shoot" style={{
-          left: `${(i * 30) % 70}%`, top: `${(i * 20) % 40}%`,
-          "--d": `${4 + i * 2}s`, "--del": `${-(i * 3)}s`,
-        } as any} />
+        <div
+          key={`s${i}`}
+          className="g-shoot"
+          style={
+            {
+              left: `${(i * 30) % 70}%`,
+              top: `${(i * 20) % 40}%`,
+              "--d": `${4 + i * 2}s`,
+              "--del": `${-(i * 3)}s`,
+            } as any
+          }
+        />
       ))}
     </div>
   );
@@ -316,21 +341,76 @@ function AuroraWaves() {
         @keyframes aw2 { 0%,100%{transform:translateX(15%) scaleY(.9);opacity:.2} 50%{transform:translateX(-15%) scaleY(1.2);opacity:.4} }
         .aurora-band { position:absolute; width:200%; left:-50%; border-radius:9999px; filter:blur(40px); }
       `}</style>
-      <div className="aurora-band" style={{ height: "35%", top: "10%", background: "linear-gradient(90deg,#00ffcc,#00bfff,#7fffaa)", animation: "aw1 6s ease-in-out infinite" }} />
-      <div className="aurora-band" style={{ height: "30%", top: "30%", background: "linear-gradient(90deg,#00e5ff,#00ff88,#00ccff)", animation: "aw2 8s ease-in-out infinite" }} />
-      <div className="aurora-band" style={{ height: "25%", top: "50%", background: "linear-gradient(90deg,#00ffaa,#00e5ff,#00ff99)", animation: "aw1 10s ease-in-out infinite reverse" }} />
+      <div
+        className="aurora-band"
+        style={{
+          height: "35%",
+          top: "10%",
+          background: "linear-gradient(90deg,#00ffcc,#00bfff,#7fffaa)",
+          animation: "aw1 6s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="aurora-band"
+        style={{
+          height: "30%",
+          top: "30%",
+          background: "linear-gradient(90deg,#00e5ff,#00ff88,#00ccff)",
+          animation: "aw2 8s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="aurora-band"
+        style={{
+          height: "25%",
+          top: "50%",
+          background: "linear-gradient(90deg,#00ffaa,#00e5ff,#00ff99)",
+          animation: "aw1 10s ease-in-out infinite reverse",
+        }}
+      />
     </div>
   );
 }
 
 function BasketballBg() {
   return (
-    <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.08 }}>
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{ opacity: 0.08 }}
+    >
       <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50%" cy="42%" r="90" fill="none" stroke="#aaa" strokeWidth="1.5" />
-        <circle cx="50%" cy="42%" r="22" fill="none" stroke="#aaa" strokeWidth="1.5" />
-        <line x1="0" y1="42%" x2="100%" y2="42%" stroke="#aaa" strokeWidth="1" strokeDasharray="5 5" />
-        <path d="M 40 75% Q 50% 8%, 60% 75%" fill="none" stroke="#aaa" strokeWidth="1.5" transform="scale(2.5) translate(-15,0)" />
+        <circle
+          cx="50%"
+          cy="42%"
+          r="90"
+          fill="none"
+          stroke="#aaa"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="50%"
+          cy="42%"
+          r="22"
+          fill="none"
+          stroke="#aaa"
+          strokeWidth="1.5"
+        />
+        <line
+          x1="0"
+          y1="42%"
+          x2="100%"
+          y2="42%"
+          stroke="#aaa"
+          strokeWidth="1"
+          strokeDasharray="5 5"
+        />
+        <path
+          d="M 40 75% Q 50% 8%, 60% 75%"
+          fill="none"
+          stroke="#aaa"
+          strokeWidth="1.5"
+          transform="scale(2.5) translate(-15,0)"
+        />
       </svg>
     </div>
   );
@@ -347,23 +427,62 @@ function FlirtBlobs() {
         .flirt-blob { position: absolute; border-radius: 50%; filter: blur(50px); }
       `}</style>
       {[
-        { w: 160, h: 160, top: "8%", left: "-5%", bg: "rgba(244,114,182,0.25)", dur: "7s", del: "0s" },
-        { w: 120, h: 120, top: "55%", left: "8%", bg: "rgba(192,38,211,0.2)", dur: "9s", del: "-3s" },
-        { w: 200, h: 200, top: "28%", right: "-8%", bg: "rgba(244,114,182,0.2)", dur: "11s", del: "-5s" },
-        { w: 80, h: 80, top: "72%", right: "18%", bg: "rgba(250,168,212,0.3)", dur: "6s", del: "-2s" },
+        {
+          w: 160,
+          h: 160,
+          top: "8%",
+          left: "-5%",
+          bg: "rgba(244,114,182,0.25)",
+          dur: "7s",
+          del: "0s",
+        },
+        {
+          w: 120,
+          h: 120,
+          top: "55%",
+          left: "8%",
+          bg: "rgba(192,38,211,0.2)",
+          dur: "9s",
+          del: "-3s",
+        },
+        {
+          w: 200,
+          h: 200,
+          top: "28%",
+          right: "-8%",
+          bg: "rgba(244,114,182,0.2)",
+          dur: "11s",
+          del: "-5s",
+        },
+        {
+          w: 80,
+          h: 80,
+          top: "72%",
+          right: "18%",
+          bg: "rgba(250,168,212,0.3)",
+          dur: "6s",
+          del: "-2s",
+        },
       ].map((b, i) => (
-        <div key={i} className="flirt-blob" style={{
-          width: b.w, height: b.h, top: b.top,
-          left: b.left ?? undefined, right: (b as any).right ?? undefined,
-          background: b.bg,
-          animation: `floatBlob ${b.dur} ${b.del} infinite ease-in-out`,
-        }} />
+        <div
+          key={i}
+          className="flirt-blob"
+          style={{
+            width: b.w,
+            height: b.h,
+            top: b.top,
+            left: b.left ?? undefined,
+            right: (b as any).right ?? undefined,
+            background: b.bg,
+            animation: `floatBlob ${b.dur} ${b.del} infinite ease-in-out`,
+          }}
+        />
       ))}
     </div>
   );
 }
 
-function AnimatedBg({ themeId }: { themeId: ChatTheme }) {
+export function AnimatedBg({ themeId }: { themeId: ChatTheme }) {
   if (themeId === "love") return <LoveParticles />;
   if (themeId === "galaxy") return <GalaxyStars />;
   if (themeId === "aurora") return <AuroraWaves />;
@@ -377,8 +496,14 @@ function AnimatedBg({ themeId }: { themeId: ChatTheme }) {
 const PREVIEW_MESSAGES = [
   { isMe: false, text: "Every theme creates a unique experience." },
   { isMe: true, text: "You'll see the messages you send in this color." },
-  { isMe: false, text: "And the messages you receive from other people in this color." },
-  { isMe: true, text: "Tap Select to choose this theme or Cancel to preview others." },
+  {
+    isMe: false,
+    text: "And the messages you receive from other people in this color.",
+  },
+  {
+    isMe: true,
+    text: "Tap Select to choose this theme or Cancel to preview others.",
+  },
 ];
 
 interface ThemePickerProps {
@@ -388,12 +513,22 @@ interface ThemePickerProps {
   onClose: () => void;
 }
 
-export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: ThemePickerProps) {
+export function ThemePicker({
+  currentTheme,
+  chatUser,
+  onSelect,
+  onClose,
+}: ThemePickerProps) {
   const isDark = useIsDark();
   const [previewing, setPreviewing] = useState<ChatTheme | null>(null);
 
-  const previewTheme = previewing ? THEMES.find(t => t.id === previewing)! : null;
-  const now = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const previewTheme = previewing
+    ? THEMES.find((t) => t.id === previewing)!
+    : null;
+  const now = new Date().toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
   const openPreview = (id: ChatTheme) => setPreviewing(id);
   const closePreview = () => setPreviewing(null);
@@ -420,42 +555,67 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
           className="w-full max-w-[430px] rounded-t-[28px] overflow-hidden"
           style={{
             background: isDark ? "hsl(0 0% 8%)" : "hsl(0 0% 100%)",
-            border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
+            border: isDark
+              ? "1px solid rgba(255,255,255,0.08)"
+              : "1px solid rgba(0,0,0,0.06)",
             boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
             animation: "slideUpPicker 0.3s cubic-bezier(0.34,1.2,0.64,1) both",
           }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-6 pt-5 pb-2">
             <div className="flex items-center gap-2.5">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 via-violet-500 to-blue-500" />
-              <h3 className="text-[17px] font-bold text-foreground">Chat Theme</h3>
+              <h3 className="text-[17px] font-bold text-foreground">
+                Chat Theme
+              </h3>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+            >
               <X size={16} className="text-muted-foreground" />
             </button>
           </div>
-          <p className="text-[12px] text-muted-foreground px-6 pb-4">Tap any theme to preview it</p>
+          <p className="text-[12px] text-muted-foreground px-6 pb-4">
+            Tap any theme to preview it
+          </p>
 
           <div className="px-4 pb-8 grid grid-cols-4 gap-3">
-            {THEMES.map(t => {
+            {THEMES.map((t) => {
               const isActive = currentTheme === t.id;
               return (
-                <button key={t.id} onClick={() => openPreview(t.id)} className="flex flex-col items-center gap-1.5 group">
+                <button
+                  key={t.id}
+                  onClick={() => openPreview(t.id)}
+                  className="flex flex-col items-center gap-1.5 group"
+                >
                   <div
-                    className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 relative ${isActive ? "border-primary scale-105" : "border-transparent group-hover:border-white/20 group-hover:scale-[1.02]"
-                      }`}
+                    className={`w-full rounded-2xl overflow-hidden border-2 transition-all duration-200 relative ${
+                      isActive
+                        ? "border-primary scale-105"
+                        : "border-transparent group-hover:border-white/20 group-hover:scale-[1.02]"
+                    }`}
                     style={{ aspectRatio: "3/4", background: t.thumbBg }}
                   >
                     <div className="absolute inset-0 flex flex-col justify-end p-1.5 gap-1">
                       <div className="flex justify-end">
-                        <div className="h-2.5 w-[68%] rounded-full" style={{ background: t.thumbMine, opacity: 0.9 }} />
+                        <div
+                          className="h-2.5 w-[68%] rounded-full"
+                          style={{ background: t.thumbMine, opacity: 0.9 }}
+                        />
                       </div>
                       <div className="flex justify-start">
-                        <div className="h-2.5 w-[52%] rounded-full" style={{ background: t.thumbOther, opacity: 0.85 }} />
+                        <div
+                          className="h-2.5 w-[52%] rounded-full"
+                          style={{ background: t.thumbOther, opacity: 0.85 }}
+                        />
                       </div>
                       <div className="flex justify-end">
-                        <div className="h-2.5 w-[45%] rounded-full" style={{ background: t.thumbMine, opacity: 0.9 }} />
+                        <div
+                          className="h-2.5 w-[45%] rounded-full"
+                          style={{ background: t.thumbMine, opacity: 0.9 }}
+                        />
                       </div>
                     </div>
                     {isActive && (
@@ -465,14 +625,21 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
                     )}
                     {t.badge && (
                       <div className="absolute top-1.5 left-0 right-0 flex justify-center">
-                        <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white"
-                          style={{ background: "rgba(255,255,255,0.22)", backdropFilter: "blur(4px)" }}>
+                        <span
+                          className="px-1.5 py-0.5 rounded-full text-[8px] font-bold text-white"
+                          style={{
+                            background: "rgba(255,255,255,0.22)",
+                            backdropFilter: "blur(4px)",
+                          }}
+                        >
                           {t.badge}
                         </span>
                       </div>
                     )}
                   </div>
-                  <span className={`text-[11px] font-medium truncate w-full text-center ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-[11px] font-medium truncate w-full text-center ${isActive ? "text-primary" : "text-muted-foreground"}`}
+                  >
                     {t.label}
                   </span>
                 </button>
@@ -488,12 +655,15 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
           className="w-full max-w-[430px] flex flex-col overflow-hidden relative"
           style={{
             height: "100vh",
-            background: previewTheme.id === "default"
-              ? (isDark ? "#09090b" : "#f4f4f5")
-              : previewTheme.chatBg,
+            background:
+              previewTheme.id === "default"
+                ? isDark
+                  ? "#09090b"
+                  : "#f4f4f5"
+                : previewTheme.chatBg,
             animation: "previewSlideIn 0.25s ease both",
           }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Animated bg layer */}
           <AnimatedBg themeId={previewTheme.id} />
@@ -501,9 +671,17 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
           {/* Top bar */}
           <div
             className="relative z-10 flex items-center gap-3 px-4 pt-12 pb-4 shrink-0"
-            style={{ background: previewTheme.id === "default" ? undefined : `${previewTheme.hex}D0` }}
+            style={{
+              background:
+                previewTheme.id === "default"
+                  ? undefined
+                  : `${previewTheme.hex}D0`,
+            }}
           >
-            <button onClick={closePreview} className="text-white/80 hover:text-white transition-colors p-1">
+            <button
+              onClick={closePreview}
+              className="text-white/80 hover:text-white transition-colors p-1"
+            >
               <ArrowLeft size={22} strokeWidth={1.5} />
             </button>
             <img
@@ -512,7 +690,12 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
               alt=""
             />
             <div className="flex flex-col">
-              <span className="font-semibold text-[15px]" style={{ color: previewTheme.id === "default" ? undefined : "#fff" }}>
+              <span
+                className="font-semibold text-[15px]"
+                style={{
+                  color: previewTheme.id === "default" ? undefined : "#fff",
+                }}
+              >
                 {chatUser?.name || "Preview Chat"}
               </span>
             </div>
@@ -520,11 +703,21 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
 
           {/* Theme name */}
           <div className="relative z-10 text-center py-4 shrink-0">
-            <p className="font-bold text-[18px]" style={{ color: previewTheme.id === "default" ? undefined : "#fff" }}>
+            <p
+              className="font-bold text-[18px]"
+              style={{
+                color: previewTheme.id === "default" ? undefined : "#fff",
+              }}
+            >
               Previewing {previewTheme.label}
             </p>
             {previewTheme.badge && (
-              <p className="text-[13px] mt-0.5" style={{ color: previewTheme.mutedText || "rgba(255,255,255,0.6)" }}>
+              <p
+                className="text-[13px] mt-0.5"
+                style={{
+                  color: previewTheme.mutedText || "rgba(255,255,255,0.6)",
+                }}
+              >
                 {previewTheme.badge}
               </p>
             )}
@@ -534,25 +727,47 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
           <div className="relative z-10 flex-1 flex flex-col justify-end px-4 pb-3 gap-3 overflow-hidden">
             {PREVIEW_MESSAGES.map((m, i) => {
               const isDefault = previewTheme.id === "default";
-              const bubbleBg = isDefault ? (m.isMe ? "#3f3f46" : "#e4e4e7") : (m.isMe ? previewTheme.myBubble : previewTheme.otherBubble);
-              const bubbleText = isDefault ? (m.isMe ? "#fff" : "#18181b") : (m.isMe ? previewTheme.myBubbleText : previewTheme.otherBubbleText);
+              const bubbleBg = isDefault
+                ? m.isMe
+                  ? "#3f3f46"
+                  : "#e4e4e7"
+                : m.isMe
+                  ? previewTheme.myBubble
+                  : previewTheme.otherBubble;
+              const bubbleText = isDefault
+                ? m.isMe
+                  ? "#fff"
+                  : "#18181b"
+                : m.isMe
+                  ? previewTheme.myBubbleText
+                  : previewTheme.otherBubbleText;
               return (
-                <div key={i} className={`flex ${m.isMe ? "justify-end" : "justify-start"}`}
-                  style={{ animation: `msgPop 0.3s ${i * 0.07}s ease both` }}>
+                <div
+                  key={i}
+                  className={`flex ${m.isMe ? "justify-end" : "justify-start"}`}
+                  style={{ animation: `msgPop 0.3s ${i * 0.07}s ease both` }}
+                >
                   <div
                     className="max-w-[78%] rounded-2xl px-4 py-2.5"
                     style={{
                       background: bubbleBg,
                       color: bubbleText,
-                      backdropFilter: !m.isMe && !isDefault ? "blur(8px)" : undefined,
-                      WebkitBackdropFilter: !m.isMe && !isDefault ? "blur(8px)" : undefined,
+                      backdropFilter:
+                        !m.isMe && !isDefault ? "blur(8px)" : undefined,
+                      WebkitBackdropFilter:
+                        !m.isMe && !isDefault ? "blur(8px)" : undefined,
                     }}
                   >
                     <p className="text-[14px] leading-snug">{m.text}</p>
                     {m.isMe && (
-                      <p className="text-[10px] mt-0.5 text-right" style={{
-                        color: isDefault ? "rgba(255,255,255,0.45)" : previewTheme.mutedText,
-                      }}>
+                      <p
+                        className="text-[10px] mt-0.5 text-right"
+                        style={{
+                          color: isDefault
+                            ? "rgba(255,255,255,0.45)"
+                            : previewTheme.mutedText,
+                        }}
+                      >
                         {now} ✓✓
                       </p>
                     )}
@@ -562,11 +777,19 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
             })}
             {/* Date separator */}
             <div className="text-center py-1">
-              <span className="text-[11px] px-3 py-1 rounded-full"
+              <span
+                className="text-[11px] px-3 py-1 rounded-full"
                 style={{
-                  color: previewTheme.id === "default" ? "rgba(100,100,100,0.9)" : (previewTheme.mutedText || "rgba(255,255,255,0.5)"),
-                  background: previewTheme.id === "default" ? "rgba(0,0,0,0.06)" : "rgba(0,0,0,0.28)",
-                }}>
+                  color:
+                    previewTheme.id === "default"
+                      ? "rgba(100,100,100,0.9)"
+                      : previewTheme.mutedText || "rgba(255,255,255,0.5)",
+                  background:
+                    previewTheme.id === "default"
+                      ? "rgba(0,0,0,0.06)"
+                      : "rgba(0,0,0,0.28)",
+                }}
+              >
                 Today {now}
               </span>
             </div>
@@ -576,9 +799,10 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
           <div
             className="relative z-10 flex gap-3 px-4 pb-10 pt-4 shrink-0"
             style={{
-              background: previewTheme.id === "default"
-                ? "linear-gradient(to top, #09090b 0%, transparent 100%)"
-                : `linear-gradient(to top, ${previewTheme.hex} 0%, transparent 100%)`,
+              background:
+                previewTheme.id === "default"
+                  ? "linear-gradient(to top, #09090b 0%, transparent 100%)"
+                  : `linear-gradient(to top, ${previewTheme.hex} 0%, transparent 100%)`,
             }}
           >
             <button
@@ -587,7 +811,10 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
               style={{
                 background: "rgba(255,255,255,0.12)",
                 border: "1px solid rgba(255,255,255,0.18)",
-                color: previewTheme.id === "default" ? "#a1a1aa" : "rgba(255,255,255,0.8)",
+                color:
+                  previewTheme.id === "default"
+                    ? "#a1a1aa"
+                    : "rgba(255,255,255,0.8)",
               }}
             >
               Cancel
@@ -597,7 +824,10 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
               className="flex-1 py-3.5 rounded-2xl font-bold text-[15px] text-white transition-all active:scale-95"
               style={{
                 background: currentTheme === previewing ? "#16a34a" : "#5b5ef4",
-                boxShadow: currentTheme === previewing ? "0 4px 20px rgba(22,163,74,0.5)" : "0 4px 20px rgba(91,94,244,0.5)",
+                boxShadow:
+                  currentTheme === previewing
+                    ? "0 4px 20px rgba(22,163,74,0.5)"
+                    : "0 4px 20px rgba(91,94,244,0.5)",
               }}
             >
               {currentTheme === previewing ? "Applied ✓" : "Select"}
@@ -610,7 +840,7 @@ export function ThemePicker({ currentTheme, chatUser, onSelect, onClose }: Theme
 }
 
 export function getThemeStyles(theme: ChatTheme) {
-  const t = THEMES.find(x => x.id === theme) || THEMES[0];
+  const t = THEMES.find((x) => x.id === theme) || THEMES[0];
   return {
     myBubble: t.myBubble,
     myBubbleText: t.myBubbleText,
