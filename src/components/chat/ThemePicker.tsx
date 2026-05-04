@@ -353,9 +353,53 @@ function LoveParticles() {
       ))}
 
       {/* Floating hearts */}
-      {Array.from({ length: 18 }).map((_, i) => {
-        const emojis = ["❤️", "💕", "💗", "💓", "🩷", "💖", "💝", "💘"];
-        return (
+      {(() => {
+        const emojis = [
+          "❤️",
+          "💕",
+          "💗",
+          "💓",
+          "🩷",
+          "💖",
+          "💝",
+          "💘",
+          "🧡",
+          "💛",
+          "💚",
+          "💙",
+          "🩵",
+          "💜",
+          "🤎",
+          "🖤",
+          "🩶",
+          "🤍",
+          "💔",
+          "❤️‍🩹",
+          "❤️‍🔥",
+          "💞",
+          "💟",
+          "❣️",
+          "💌",
+          "🫀",
+          "♥",
+          "♡",
+          "❤",
+          "❥",
+          "❦",
+          "❧",
+          "☙",
+          "ღ",
+          "ෆ",
+          "😍",
+          "🥰",
+          "😘",
+          "😚",
+          "😻",
+          "💋",
+          "🫶",
+          "🤟",
+        ];
+        return Array.from({ length: emojis.length }).map((_, i) => (
           <span
             key={i}
             className="love-heart"
@@ -371,10 +415,10 @@ function LoveParticles() {
               } as any
             }
           >
-            {emojis[i % emojis.length]}
+            {emojis[i]}
           </span>
-        );
-      })}
+        ));
+      })()}
     </div>
   );
 }
